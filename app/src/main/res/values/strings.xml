@@ -5,6 +5,8 @@
     <string name="menu_settings">Settings</string>
     <string name="menu_edit">Edit</string>
     <string name="menu_save">Save</string>
+    <string name="menu_caps_enabled">Caps enabled</string>
+    <string name="menu_caps_disabled">Caps disabled</string>
 
     <string name="label_create_new">New</string>
     <string name="label_settings">Settings</string>

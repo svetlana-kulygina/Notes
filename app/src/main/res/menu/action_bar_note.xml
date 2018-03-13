@@ -3,6 +3,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_caps"
+        android:title="@string/menu_caps_enabled"
+        android:icon="@drawable/ic_caps"
+        app:showAsAction="ifRoom"/>
+
+    <item
+        android:id="@+id/action_lower"
+        android:title="@string/menu_caps_disabled"
+        android:icon="@drawable/ic_lower"
+        android:visible="false"
+        app:showAsAction="ifRoom"/>
+
+    <item
         android:id="@+id/action_edit"
         android:title="@string/menu_edit"
         android:icon="@drawable/ic_edit"
