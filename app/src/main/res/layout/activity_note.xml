@@ -3,6 +3,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:focusable="true"
+    android:focusableInTouchMode="true"
     tools:context="com.pinejuice.notes.NoteActivity">
+
+    <EditText
+        android:id="@+id/editNote"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:inputType="textMultiLine|textCapSentences"
+        android:scrollbars="vertical"
+        android:gravity="top"/>
 
 </android.support.constraint.ConstraintLayout>
