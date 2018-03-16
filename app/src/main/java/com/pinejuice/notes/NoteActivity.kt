@@ -2,6 +2,7 @@ package com.pinejuice.notes
 
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import kotlinx.android.synthetic.main.activity_note.*
@@ -17,6 +18,10 @@ class NoteActivity : SlideActivity() {
         if (savedInstanceState?.get("key") != null) {
             noteExists = true
         }
+        val actionBar = supportActionBar
+        actionBar?.setDisplayShowTitleEnabled(false)
+        actionBar?.setDisplayShowCustomEnabled(true)
+        actionBar?.setCustomView(R.layout.action_bar_note_custom)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
