@@ -1,25 +1,31 @@
 package com.pinejuice.notes
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import android.support.v4.widget.SimpleCursorAdapter
 import android.view.*
+import android.widget.AdapterView
 import android.widget.SimpleAdapter
+import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
-
+import java.io.File
 
 class MainActivity : SlideActivity() {
 
-    private val ATTRIBUTE_NAME = "name"
+    private val attributeName = "name"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+    }
+
+    override fun onResume() {
+        super.onResume()
         fillList()
     }
 
     private fun fillList() {
-        val allNotes = getExternalFilesDir(null).list()
+        val allNotes = ApplicationContext.appFiles.list()
         if (allNotes == null || allNotes.isEmpty()) {
             emptyListHint.visibility = View.VISIBLE
             return
@@ -27,12 +33,21 @@ class MainActivity : SlideActivity() {
         val data = ArrayList<Map<String, Any>>()
         for (title in allNotes) {
             val m = HashMap<String, Any>()
-            m.put(ATTRIBUTE_NAME, title)
+            m.put(attributeName, title.removeSuffix(".txt"))
             data.add(m)
         }
-        val from = arrayOf(ATTRIBUTE_NAME)
+        val from = arrayOf(attributeName)
         val to = intArrayOf(R.id.text1)
         listView.adapter = SimpleAdapter(this, data, R.layout.list_item, from, to)
+        listView.onItemClickListener = onClickListener
+    }
+
+    private val onClickListener = AdapterView.OnItemClickListener { _, view, _, _ ->
+        val name = view.findViewById<TextView>(R.id.text1).text
+        val file = File(ApplicationContext.appFiles, "$name.txt")
+        val intent = Intent(this, NoteActivity::class.java).apply {}
+        intent.data = Uri.fromFile(file)
+        startActivity(intent)
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {

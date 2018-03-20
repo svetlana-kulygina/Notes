@@ -3,7 +3,6 @@ package com.pinejuice.notes
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
@@ -14,16 +13,15 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
 import java.lang.Exception
-import java.nio.file.Files
 
 
 class NoteActivity : SlideActivity() {
 
-    private val filenamePattern = "[?|\\/\":*<>\n]+"
+    private val filenamePattern = "[?|/\"*<>\n]+"
     private var noteExists = false
     private var menu: Menu? = null
     private var file: File? = null
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,19 +33,35 @@ class NoteActivity : SlideActivity() {
         actionBar?.setDisplayShowTitleEnabled(false)
         actionBar?.setDisplayShowCustomEnabled(true)
         actionBar?.setCustomView(R.layout.action_bar_note_custom)
+        parseIntentUri()
+    }
+
+    private fun parseIntentUri() {
         if (intent.data != null) {
-            BufferedInputStream(contentResolver.openInputStream(intent.data)).use {
-                val bis = it
-                ByteArrayOutputStream().use {
-                    var result = bis.read()
-                    while (result != -1) {
-                        it.write(result)
-                        result = bis.read()
-                    }
-                    editNote.setText(it.toString())
+            var input: InputStream? = null
+            var filePath: String? = null
+            when (intent.data.scheme) {
+                "file" -> {
+                    filePath = intent.data.path
+                    input = File(filePath).inputStream()
+                }
+                "content" -> {
+                    filePath = getRealPathFromURI(intent.data)
+                    input = contentResolver.openInputStream(intent.data)
                 }
             }
-            val filePath = getRealPathFromURI(intent.data)
+            if (input != null) {
+                BufferedInputStream(input).use { bis ->
+                    ByteArrayOutputStream().use {
+                        var result = bis.read()
+                        while (result != -1) {
+                            it.write(result)
+                            result = bis.read()
+                        }
+                        editNote.setText(it.toString())
+                    }
+                }
+            }
             if (filePath != null) {
                 file = File(filePath)
                 val pathSplit = filePath.split("/")
@@ -97,6 +111,7 @@ class NoteActivity : SlideActivity() {
             item.isVisible = false
             menu?.findItem(R.id.action_edit)?.isVisible = true
             save()
+            finish()
             true
         }
 
@@ -156,7 +171,7 @@ class NoteActivity : SlideActivity() {
     }
 
     private fun createFile(): File {
-        val dir = getExternalFilesDir(null)
+        val dir = ApplicationContext.appFiles
         val f = File(dir.absolutePath, generateTitle(dir))
         f.createNewFile()
         return f
