@@ -14,7 +14,6 @@ import java.util.*
 import android.provider.MediaStore
 import java.lang.Exception
 
-
 class NoteActivity : SlideActivity() {
 
     private var noteExists = false
@@ -25,9 +24,6 @@ class NoteActivity : SlideActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
-        if (savedInstanceState?.get("key") != null) {
-            noteExists = true
-        }
         val actionBar = supportActionBar
         actionBar?.setDisplayShowTitleEnabled(false)
         actionBar?.setDisplayShowCustomEnabled(true)
@@ -37,6 +33,7 @@ class NoteActivity : SlideActivity() {
 
     private fun parseIntentUri() {
         if (intent.data != null) {
+            noteExists = true
             var input: InputStream? = null
             var filePath: String? = null
             when (intent.data.scheme) {

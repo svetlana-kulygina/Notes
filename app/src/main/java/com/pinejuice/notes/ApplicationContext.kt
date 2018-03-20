@@ -1,10 +1,7 @@
 package com.pinejuice.notes
 
 import android.app.Application
-import kotlinx.android.synthetic.main.action_bar_note_custom.*
-import kotlinx.android.synthetic.main.activity_note.*
 import java.io.File
-import java.util.*
 
 class ApplicationContext : Application() {
 

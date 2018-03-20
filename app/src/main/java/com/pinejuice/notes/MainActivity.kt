@@ -3,28 +3,17 @@ package com.pinejuice.notes
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.AdapterView
 import android.widget.SimpleAdapter
 import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
-import android.view.MenuInflater
 import android.view.ContextMenu.ContextMenuInfo
 import android.view.ContextMenu
-import android.R.string.cancel
-import android.content.DialogInterface
-import android.app.Activity
 import android.app.AlertDialog
 import android.support.constraint.ConstraintLayout
-import android.util.AttributeSet
 import android.widget.EditText
-import kotlinx.android.synthetic.main.rename_dialog_input.*
-import android.view.LayoutInflater
-
-
-
 
 class MainActivity : SlideActivity() {
 
