@@ -17,7 +17,6 @@ import java.lang.Exception
 
 class NoteActivity : SlideActivity() {
 
-    private val filenamePattern = "[?|/\"*<>\n]+"
     private var noteExists = false
     private var menu: Menu? = null
     private var file: File? = null
@@ -43,7 +42,8 @@ class NoteActivity : SlideActivity() {
             when (intent.data.scheme) {
                 "file" -> {
                     filePath = intent.data.path
-                    input = File(filePath).inputStream()
+                    input = try {
+                        File(filePath).inputStream() } catch (ex: FileNotFoundException) { null }
                 }
                 "content" -> {
                     filePath = getRealPathFromURI(intent.data)
@@ -145,27 +145,16 @@ class NoteActivity : SlideActivity() {
         }
     }
 
-    private fun makeValidTitle(title: CharSequence): CharSequence {
-        return title.replace(Regex(filenamePattern), "").trim()
-    }
-
     private fun generateTitle(directory: File): String {
-        var title: CharSequence = makeValidTitle(noteTitle.text)
+        var title: String = ApplicationContext.makeValidTitle(noteTitle.text)
         if (title.isBlank()) {
-            title = makeValidTitle(editNote.text.take(20))
+            title = ApplicationContext.makeValidTitle(editNote.text.take(20))
         }
         if (title.isBlank()) {
             title = dateFormat.format(Date())
         }
-        val children = directory.list()
-        if (children != null) {
-            var iterTitle = title
-            var i = 1
-            while (children.contains("$iterTitle.txt")) {
-                iterTitle = "$title ($i)"
-                i++
-            }
-            title = iterTitle
+        if (title != file?.name?.removeSuffix(".txt")) {
+            title = ApplicationContext.iterateTitle(directory, title)
         }
         return "$title.txt"
     }
@@ -185,7 +174,8 @@ class NoteActivity : SlideActivity() {
             val currentName = f.name
             val newName = generateTitle(f.parentFile)
             if (currentName != newName) {
-                f.renameTo(File(f.parentFile, newName))
+                file = File(f.parentFile, newName)
+                f.renameTo(file)
             }
         }
         val outWriter = OutputStreamWriter(file!!.outputStream())
