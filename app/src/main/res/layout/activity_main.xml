@@ -1,10 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bookPage"
     tools:context="com.pinejuice.notes.MainActivity">
 
+    <ListView
+        android:id="@+id/listView"
+        android:scrollbars="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
-</android.support.constraint.ConstraintLayout>
+    <TextView
+        android:id="@+id/emptyListHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/main_no_elements"
+        android:textColor="@android:color/darker_gray"
+        android:gravity="center"
+        android:layout_centerVertical="true"
+        android:textSize="16sp"
+        android:visibility="invisible"/>
+
+</RelativeLayout >

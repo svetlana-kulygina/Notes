@@ -8,7 +8,11 @@
     <string name="menu_caps_enabled">Caps enabled</string>
     <string name="menu_caps_disabled">Caps disabled</string>
 
+    <string name="toast_saved">Saved</string>
+
     <string name="hint_note_title">Title</string>
+
+    <string name="main_no_elements">No notes found</string>
 
     <string name="label_create_new">New</string>
     <string name="label_settings">Settings</string>

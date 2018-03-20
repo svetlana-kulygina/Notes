@@ -14,7 +14,7 @@
         android:inputType="textMultiLine|textCapSentences"
         android:scrollbars="vertical"
         android:gravity="top"
-        android:background="@color/bookPage"
+        android:background="@android:color/white"
         android:padding="5dp"/>
 
 </android.support.constraint.ConstraintLayout>
