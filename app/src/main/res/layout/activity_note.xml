@@ -7,15 +7,19 @@
     android:focusableInTouchMode="true"
     tools:context="com.pinejuice.notes.NoteActivity">
 
-    <EditText
-        android:id="@+id/editNote"
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:inputType="textMultiLine|textCapSentences"
-        android:scrollbars="vertical"
-        android:gravity="top"
-        android:background="@android:color/white"
-        android:textColor="@android:color/black"
-        android:padding="5dp"/>
+        android:layout_height="match_parent">
+
+        <EditText
+            android:id="@+id/editNote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textMultiLine|textCapSentences"
+            android:gravity="top"
+            android:background="@android:color/white"
+            android:textColor="@android:color/black"
+            android:padding="5dp"/>
+    </ScrollView>
 
 </android.support.constraint.ConstraintLayout>
