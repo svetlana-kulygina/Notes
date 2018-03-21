@@ -3,8 +3,6 @@ package com.pinejuice.notes
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.Toast
 import kotlinx.android.synthetic.main.action_bar_note_custom.*
 import kotlinx.android.synthetic.main.activity_note.*
@@ -12,12 +10,13 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
-import android.view.GestureDetector
-import android.view.MotionEvent
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.*
 
 class NoteActivity : SlideActivity() {
+
+    private val scrollYKey = "scrollY"
 
     private var editEnabled = true
     private var menu: Menu? = null
@@ -34,11 +33,19 @@ class NoteActivity : SlideActivity() {
         actionBar?.setCustomView(R.layout.action_bar_note_custom)
         if (savedInstanceState == null) {
             parseIntentUri()
+            scrollView.post { scrollView.fullScroll(View.FOCUS_DOWN) }
+        } else {
+            scrollView.scrollTo(scrollView.scrollX, savedInstanceState.getInt(scrollYKey))
         }
         gestureDetector = GestureDetector(this, GestureListener())
         editNote.setOnTouchListener { _, event ->
             gestureDetector.onTouchEvent(event)
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle?) {
+        super.onSaveInstanceState(outState)
+        outState?.putInt(scrollYKey, scrollView.scrollY)
     }
 
     private fun parseIntentUri() {
@@ -121,8 +128,6 @@ class NoteActivity : SlideActivity() {
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
 
         R.id.action_save -> {
-            item.isVisible = false
-            menu?.findItem(R.id.action_edit)?.isVisible = true
             save()
             finish()
             true
@@ -203,6 +208,7 @@ class NoteActivity : SlideActivity() {
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
             enableEdit(true)
+            editNote.requestFocus()
             return true
         }
     }
