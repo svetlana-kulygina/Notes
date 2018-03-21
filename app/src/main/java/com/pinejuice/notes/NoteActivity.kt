@@ -16,7 +16,7 @@ import java.lang.Exception
 
 class NoteActivity : SlideActivity() {
 
-    private var noteExists = false
+    private var editEnabled = false
     private var menu: Menu? = null
     private var file: File? = null
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
@@ -33,7 +33,7 @@ class NoteActivity : SlideActivity() {
 
     private fun parseIntentUri() {
         if (intent.data != null) {
-            noteExists = true
+            enableEdit(false)
             var input: InputStream? = null
             var filePath: String? = null
             when (intent.data.scheme) {
@@ -90,12 +90,20 @@ class NoteActivity : SlideActivity() {
         this.menu = menu
         val save = menu.findItem(R.id.action_save)
         val edit = menu.findItem(R.id.action_edit)
-        if (noteExists) {
-            edit?.isVisible = true
-        } else {
+        if (editEnabled) {
             save?.isVisible = true
+        } else {
+            edit?.isVisible = true
         }
         return true
+    }
+
+    private fun enableEdit(enable: Boolean) {
+        editEnabled = enable
+        noteTitle.isFocusable = enable
+        noteTitle.isFocusableInTouchMode = enable
+        editNote.isFocusable = enable
+        editNote.isFocusableInTouchMode = enable
     }
 
     private fun toggleCaps() {
@@ -113,6 +121,7 @@ class NoteActivity : SlideActivity() {
         }
 
         R.id.action_edit -> {
+            enableEdit(true)
             item.isVisible = false
             menu?.findItem(R.id.action_save)?.isVisible = true
             true
