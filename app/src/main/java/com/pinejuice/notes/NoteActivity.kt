@@ -12,14 +12,18 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
+import android.view.GestureDetector
+import android.view.MotionEvent
 import java.lang.Exception
+import android.view.GestureDetector.SimpleOnGestureListener
 
 class NoteActivity : SlideActivity() {
 
-    private var editEnabled = false
+    private var editEnabled = true
     private var menu: Menu? = null
     private var file: File? = null
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+    private lateinit var gestureDetector: GestureDetector
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,12 +32,18 @@ class NoteActivity : SlideActivity() {
         actionBar?.setDisplayShowTitleEnabled(false)
         actionBar?.setDisplayShowCustomEnabled(true)
         actionBar?.setCustomView(R.layout.action_bar_note_custom)
-        parseIntentUri()
+        if (savedInstanceState == null) {
+            parseIntentUri()
+        }
+        gestureDetector = GestureDetector(this, GestureListener())
+        editNote.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+        }
     }
 
     private fun parseIntentUri() {
         if (intent.data != null) {
-            enableEdit(false)
+            editEnabled = false
             var input: InputStream? = null
             var filePath: String? = null
             when (intent.data.scheme) {
@@ -88,22 +98,20 @@ class NoteActivity : SlideActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         this.menu = menu
-        val save = menu.findItem(R.id.action_save)
-        val edit = menu.findItem(R.id.action_edit)
-        if (editEnabled) {
-            save?.isVisible = true
-        } else {
-            edit?.isVisible = true
-        }
+        enableEdit(editEnabled)
         return true
     }
 
     private fun enableEdit(enable: Boolean) {
         editEnabled = enable
+        menu?.findItem(R.id.action_save)?.isVisible = enable
+        menu?.findItem(R.id.action_edit)?.isVisible = !enable
         noteTitle.isFocusable = enable
         noteTitle.isFocusableInTouchMode = enable
+        noteTitle.isCursorVisible = enable
         editNote.isFocusable = enable
         editNote.isFocusableInTouchMode = enable
+        editNote.isCursorVisible = enable
     }
 
     private fun toggleCaps() {
@@ -189,5 +197,13 @@ class NoteActivity : SlideActivity() {
             it.append(editNote.text)
         }
         Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+    }
+
+    private inner class GestureListener : SimpleOnGestureListener() {
+
+        override fun onDoubleTap(e: MotionEvent): Boolean {
+            enableEdit(true)
+            return true
+        }
     }
 }
