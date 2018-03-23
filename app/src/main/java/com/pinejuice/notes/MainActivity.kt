@@ -14,10 +14,15 @@ import android.view.ContextMenu
 import android.app.AlertDialog
 import android.support.constraint.ConstraintLayout
 import android.widget.EditText
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : SlideActivity() {
 
     private val attributeName = "name"
+    private val attributeDate = "created at"
+    private val dateFormat = SimpleDateFormat.getDateInstance(DateFormat.SHORT)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,20 +35,27 @@ class MainActivity : SlideActivity() {
         fillList()
     }
 
+    private fun getCreationDate(file: File): Long {
+        return ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
+    }
+
     private fun fillList() {
-        val allNotes = ApplicationContext.appFiles.list()
+        var allNotes = ApplicationContext.appFiles.listFiles()
         if (allNotes == null || allNotes.isEmpty()) {
             emptyListHint.visibility = View.VISIBLE
             return
         }
         val data = ArrayList<Map<String, Any>>()
-        for (title in allNotes) {
+        allNotes = allNotes.sortedWith(compareByDescending { getCreationDate(it) }).toTypedArray()
+        for (file in allNotes) {
             val m = HashMap<String, Any>()
-            m.put(attributeName, title.removeSuffix(".txt"))
+            m.put(attributeName, file.nameWithoutExtension)
+            val creationDate = ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
+            m.put(attributeDate, dateFormat.format(Date(creationDate)))
             data.add(m)
         }
-        val from = arrayOf(attributeName)
-        val to = intArrayOf(R.id.text1)
+        val from = arrayOf(attributeName, attributeDate)
+        val to = intArrayOf(R.id.text1, R.id.text2)
         listView.adapter = SimpleAdapter(this, data, R.layout.list_item, from, to)
         listView.onItemClickListener = onClickListener
     }
@@ -123,11 +135,14 @@ class MainActivity : SlideActivity() {
         alert.setView(layout)
 
         alert.setPositiveButton(android.R.string.ok, { _, _ ->
-            var newTitle = ApplicationContext.makeValidTitle(input.editableText.toString())
+            val file = getFile(name)
+            val creationDate = ApplicationContext.sharedPref.getLong(name.toString(), file.lastModified())
+            var newTitle = Global.makeValidTitle(input.editableText.toString())
             if (!newTitle.isBlank() && name != newTitle) {
-                newTitle = ApplicationContext.iterateTitle(ApplicationContext.appFiles, newTitle)
+                newTitle = Global.iterateTitle(ApplicationContext.appFiles, newTitle)
             }
-            getFile(name).renameTo(File(ApplicationContext.appFiles, "$newTitle.txt"))
+            ApplicationContext.sharedPref.edit().remove(name.toString()).putLong(newTitle, creationDate).apply()
+            file.renameTo(File(ApplicationContext.appFiles, "$newTitle.txt"))
             fillList()
         })
 
@@ -142,6 +157,7 @@ class MainActivity : SlideActivity() {
         alert.setTitle(title)
 
         alert.setPositiveButton(android.R.string.ok, { _, _ ->
+            ApplicationContext.sharedPref.edit().remove(name.toString()).apply()
             getFile(name).delete()
             fillList()
         })

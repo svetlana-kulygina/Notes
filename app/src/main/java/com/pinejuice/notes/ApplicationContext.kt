@@ -1,37 +1,25 @@
 package com.pinejuice.notes
 
 import android.app.Application
+import android.content.Context
 import java.io.File
+import android.content.SharedPreferences
+import android.util.Log
 
 class ApplicationContext : Application() {
 
     companion object {
 
-        private val filenamePattern = "[?|/\"*<>\n]+"
-
+        lateinit private var preferences_key: String
         lateinit var appFiles: File
-
-        fun makeValidTitle(title: CharSequence): String {
-            return title.replace(Regex(filenamePattern), "").trim()
-        }
-
-        fun iterateTitle(directory: File, title: String): String {
-            val children = directory.list()
-            if (children != null) {
-                var iterTitle = title
-                var i = 1
-                while (children.contains("$iterTitle.txt")) {
-                    iterTitle = "$title ($i)"
-                    i++
-                }
-                return iterTitle
-            }
-            return title
-        }
+        lateinit var sharedPref: SharedPreferences
     }
 
     override fun onCreate() {
         super.onCreate()
+        preferences_key = "$packageName.preferences"
+        Log.e("test", preferences_key)
         appFiles = getExternalFilesDir(null)
+        sharedPref = this.getSharedPreferences(preferences_key, Context.MODE_PRIVATE)
     }
 }

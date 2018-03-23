@@ -17,11 +17,14 @@ import android.view.*
 class NoteActivity : SlideActivity() {
 
     private val scrollYKey = "scrollY"
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
+    private val gestureListener = GestureListener()
+    private val ellipsis = (0x2026).toChar()
+    private val truncateLength = 30
 
     private var editEnabled = true
     private var menu: Menu? = null
     private var file: File? = null
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private lateinit var gestureDetector: GestureDetector
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,10 +40,9 @@ class NoteActivity : SlideActivity() {
         } else {
             scrollView.scrollTo(scrollView.scrollX, savedInstanceState.getInt(scrollYKey))
         }
-        gestureDetector = GestureDetector(this, GestureListener())
-        editNote.setOnTouchListener { _, event ->
-            gestureDetector.onTouchEvent(event)
-        }
+        gestureDetector = GestureDetector(this, gestureListener)
+        editNote.setOnTouchListener(gestureListener)
+        noteTitle.setOnTouchListener(gestureListener)
     }
 
     override fun onSaveInstanceState(outState: Bundle?) {
@@ -78,8 +80,7 @@ class NoteActivity : SlideActivity() {
             }
             if (filePath != null) {
                 file = File(filePath)
-                val pathSplit = filePath.split("/")
-                noteTitle.setText(pathSplit.last().removeSuffix(".txt"))
+                noteTitle.setText(file?.nameWithoutExtension)
             }
         }
     }
@@ -135,6 +136,8 @@ class NoteActivity : SlideActivity() {
 
         R.id.action_edit -> {
             enableEdit(true)
+            editNote.requestFocus()
+            editNote.setSelection(editNote.text.length)
             item.isVisible = false
             menu?.findItem(R.id.action_save)?.isVisible = true
             true
@@ -165,15 +168,20 @@ class NoteActivity : SlideActivity() {
     }
 
     private fun generateTitle(directory: File): String {
-        var title: String = ApplicationContext.makeValidTitle(noteTitle.text)
+        var title: String = Global.makeValidTitle(noteTitle.text)
         if (title.isBlank()) {
-            title = ApplicationContext.makeValidTitle(editNote.text.take(20))
+            val lines = editNote.text.split("\n")
+            val firstLine = lines.firstOrNull() ?: ""
+            title = Global.makeValidTitle(firstLine.take(truncateLength))
+            if (lines.size > 1 || firstLine.length > truncateLength) {
+                title = title.plus(Character.toString(ellipsis))
+            }
         }
         if (title.isBlank()) {
             title = dateFormat.format(Date())
         }
-        if (title != file?.name?.removeSuffix(".txt")) {
-            title = ApplicationContext.iterateTitle(directory, title)
+        if (title != file?.nameWithoutExtension) {
+            title = Global.iterateTitle(directory, title)
         }
         return "$title.txt"
     }
@@ -182,6 +190,8 @@ class NoteActivity : SlideActivity() {
         val dir = ApplicationContext.appFiles
         val f = File(dir.absolutePath, generateTitle(dir))
         f.createNewFile()
+        val creationDate = Date()
+        ApplicationContext.sharedPref.edit().putLong(f.name, creationDate.time).apply()
         return f
     }
 
@@ -195,6 +205,10 @@ class NoteActivity : SlideActivity() {
             if (currentName != newName) {
                 file = File(f.parentFile, newName)
                 f.renameTo(file)
+                val creationDate = ApplicationContext.sharedPref.getLong(currentName, -1)
+                if (creationDate != -1L) {
+                    ApplicationContext.sharedPref.edit().remove(currentName).putLong(newName, creationDate).apply()
+                }
             }
         }
         val outWriter = OutputStreamWriter(file!!.outputStream())
@@ -204,12 +218,23 @@ class NoteActivity : SlideActivity() {
         Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
     }
 
-    private inner class GestureListener : SimpleOnGestureListener() {
+    private inner class GestureListener : SimpleOnGestureListener(), View.OnTouchListener {
+
+        private var view: View? = null
+
+        override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+            v?.performClick()
+            view = v
+            return gestureDetector.onTouchEvent(event)
+        }
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            enableEdit(true)
-            editNote.requestFocus()
-            return true
+            if (!editEnabled) {
+                enableEdit(true)
+                view?.requestFocus()
+                return true
+            }
+            return false
         }
     }
 }
