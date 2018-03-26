@@ -17,6 +17,7 @@ import android.view.*
 class NoteActivity : SlideActivity() {
 
     private val scrollYKey = "scrollY"
+    private val editStateKey = "enableEdit"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private val gestureListener = GestureListener()
     private val ellipsis = (0x2026).toChar()
@@ -35,10 +36,14 @@ class NoteActivity : SlideActivity() {
         actionBar?.setDisplayShowCustomEnabled(true)
         actionBar?.setCustomView(R.layout.action_bar_note_custom)
         if (savedInstanceState == null) {
-            parseIntentUri()
+            if (intent.data != null) {
+                parseIntentUri(intent.data)
+                enableEdit(false)
+            }
             scrollView.post { scrollView.fullScroll(View.FOCUS_DOWN) }
         } else {
             scrollView.scrollTo(scrollView.scrollX, savedInstanceState.getInt(scrollYKey))
+            enableEdit(savedInstanceState.getBoolean(editStateKey))
         }
         gestureDetector = GestureDetector(this, gestureListener)
         editNote.setOnTouchListener(gestureListener)
@@ -48,40 +53,41 @@ class NoteActivity : SlideActivity() {
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
         outState?.putInt(scrollYKey, scrollView.scrollY)
+        outState?.putBoolean(editStateKey, editEnabled)
     }
 
-    private fun parseIntentUri() {
-        if (intent.data != null) {
-            editEnabled = false
-            var input: InputStream? = null
-            var filePath: String? = null
-            when (intent.data.scheme) {
-                "file" -> {
-                    filePath = intent.data.path
-                    input = try {
-                        File(filePath).inputStream() } catch (ex: FileNotFoundException) { null }
-                }
-                "content" -> {
-                    filePath = getRealPathFromURI(intent.data)
-                    input = contentResolver.openInputStream(intent.data)
+    private fun parseIntentUri(data: Uri) {
+        var input: InputStream? = null
+        var filePath: String? = null
+        when (data.scheme) {
+            "file" -> {
+                filePath = data.path
+                input = try {
+                    File(filePath).inputStream()
+                } catch (ex: FileNotFoundException) {
+                    null
                 }
             }
-            if (input != null) {
-                BufferedInputStream(input).use { bis ->
-                    ByteArrayOutputStream().use {
-                        var result = bis.read()
-                        while (result != -1) {
-                            it.write(result)
-                            result = bis.read()
-                        }
-                        editNote.setText(it.toString())
+            "content" -> {
+                filePath = getRealPathFromURI(data)
+                input = contentResolver.openInputStream(data)
+            }
+        }
+        if (input != null) {
+            BufferedInputStream(input).use { bis ->
+                ByteArrayOutputStream().use {
+                    var result = bis.read()
+                    while (result != -1) {
+                        it.write(result)
+                        result = bis.read()
                     }
+                    editNote.setText(it.toString())
                 }
             }
-            if (filePath != null) {
-                file = File(filePath)
-                noteTitle.setText(file?.nameWithoutExtension)
-            }
+        }
+        if (filePath != null) {
+            file = File(filePath)
+            noteTitle.setText(file?.nameWithoutExtension)
         }
     }
 
@@ -106,20 +112,23 @@ class NoteActivity : SlideActivity() {
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         this.menu = menu
-        enableEdit(editEnabled)
+        toggleEditBtn(editEnabled)
         return true
     }
 
     private fun enableEdit(enable: Boolean) {
         editEnabled = enable
-        menu?.findItem(R.id.action_save)?.isVisible = enable
-        menu?.findItem(R.id.action_edit)?.isVisible = !enable
         noteTitle.isFocusable = enable
         noteTitle.isFocusableInTouchMode = enable
         noteTitle.isCursorVisible = enable
         editNote.isFocusable = enable
         editNote.isFocusableInTouchMode = enable
         editNote.isCursorVisible = enable
+    }
+
+    private fun toggleEditBtn(enable: Boolean) {
+        menu?.findItem(R.id.action_save)?.isVisible = enable
+        menu?.findItem(R.id.action_edit)?.isVisible = !enable
     }
 
     private fun toggleCaps() {
@@ -136,10 +145,10 @@ class NoteActivity : SlideActivity() {
 
         R.id.action_edit -> {
             enableEdit(true)
+            toggleEditBtn(true)
             editNote.requestFocus()
             editNote.setSelection(editNote.text.length)
             item.isVisible = false
-            menu?.findItem(R.id.action_save)?.isVisible = true
             true
         }
 
@@ -231,6 +240,7 @@ class NoteActivity : SlideActivity() {
         override fun onDoubleTap(e: MotionEvent): Boolean {
             if (!editEnabled) {
                 enableEdit(true)
+                toggleEditBtn(true)
                 view?.requestFocus()
                 return true
             }
