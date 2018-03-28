@@ -14,6 +14,7 @@ import android.view.ContextMenu
 import android.app.AlertDialog
 import android.support.constraint.ConstraintLayout
 import android.widget.EditText
+import kotlinx.android.synthetic.main.toolbar.*
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,6 +28,7 @@ class MainActivity : SlideActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setSupportActionBar(toolbar)
         registerForContextMenu(listView)
     }
 

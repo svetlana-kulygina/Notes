@@ -13,6 +13,7 @@ import android.provider.MediaStore
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
+import kotlinx.android.synthetic.main.toolbar.*
 
 class NoteActivity : SlideActivity() {
 
@@ -31,10 +32,11 @@ class NoteActivity : SlideActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
-        val actionBar = supportActionBar
-        actionBar?.setDisplayShowTitleEnabled(false)
-        actionBar?.setDisplayShowCustomEnabled(true)
-        actionBar?.setCustomView(R.layout.action_bar_note_custom)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+        supportActionBar?.setDisplayShowCustomEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
         if (savedInstanceState == null) {
             if (intent.data != null) {
                 parseIntentUri(intent.data)
@@ -127,41 +129,45 @@ class NoteActivity : SlideActivity() {
     }
 
     private fun toggleEditBtn(enable: Boolean) {
-        menu?.findItem(R.id.action_save)?.isVisible = enable
-        menu?.findItem(R.id.action_edit)?.isVisible = !enable
+        val save = menu?.findItem(R.id.action_save)
+        if (enable) {
+            save?.setIcon(R.drawable.ic_ok)
+            save?.setTitle(R.string.menu_save)
+        } else {
+            save?.setIcon(R.drawable.ic_edit)
+            save?.setTitle(R.string.menu_edit)
+        }
     }
 
     private fun toggleCaps() {
+        val input = editNote.inputType.and(InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
+        val caps = menu?.findItem(R.id.action_caps)
+        if (input == 0) {
+            caps?.setIcon(R.drawable.ic_caps)
+            caps?.setTitle(R.string.menu_caps_enabled)
+        } else {
+            caps?.setIcon(R.drawable.ic_lower)
+            caps?.setTitle(R.string.menu_caps_disabled)
+        }
         editNote.inputType = editNote.inputType.xor(InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
 
         R.id.action_save -> {
-            save()
-            finish()
-            true
-        }
-
-        R.id.action_edit -> {
-            enableEdit(true)
-            toggleEditBtn(true)
-            editNote.requestFocus()
-            editNote.setSelection(editNote.text.length)
-            item.isVisible = false
+            if (editEnabled) {
+                save()
+                finish()
+            } else {
+                enableEdit(true)
+                toggleEditBtn(true)
+                editNote.requestFocus()
+                editNote.setSelection(editNote.text.length)
+            }
             true
         }
 
         R.id.action_caps -> {
-            item.isVisible = false
-            menu?.findItem(R.id.action_lower)?.isVisible = true
-            toggleCaps()
-            true
-        }
-
-        R.id.action_lower -> {
-            item.isVisible = false
-            menu?.findItem(R.id.action_caps)?.isVisible = true
             toggleCaps()
             true
         }
