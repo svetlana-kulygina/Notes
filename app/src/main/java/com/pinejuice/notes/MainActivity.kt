@@ -12,54 +12,74 @@ import java.io.File
 import android.view.ContextMenu.ContextMenuInfo
 import android.view.ContextMenu
 import android.app.AlertDialog
+import android.os.Parcelable
 import android.support.constraint.ConstraintLayout
 import android.widget.EditText
 import kotlinx.android.synthetic.main.toolbar.*
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.collections.HashMap
 
 class MainActivity : SlideActivity() {
 
+    private val listStateKey = "listState"
     private val attributeName = "name"
     private val attributeDate = "created at"
     private val dateFormat = SimpleDateFormat.getDateInstance(DateFormat.SHORT)
+
+    private var dataSet = mutableListOf<HashMap<String, Any>>()
+    private lateinit var adapter: SimpleAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+        adapter = initAdapter()
+        listView.adapter = adapter
+        listView.onItemClickListener = onClickListener
         registerForContextMenu(listView)
+        if (savedInstanceState != null) {
+            val state = savedInstanceState.getParcelable<Parcelable>(listStateKey)
+            listView.onRestoreInstanceState(state)
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        fillList()
+        createDataSet()
+        adapter.notifyDataSetChanged()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle?) {
+        super.onSaveInstanceState(outState)
+        val state = listView.onSaveInstanceState()
+        outState?.putParcelable(listStateKey, state)
     }
 
     private fun getCreationDate(file: File): Long {
         return ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
     }
 
-    private fun fillList() {
+    private fun createDataSet() {
         var allNotes = ApplicationContext.appFiles.listFiles()
-        if (allNotes == null || allNotes.isEmpty()) {
-            emptyListHint.visibility = View.VISIBLE
-            return
+        if (allNotes != null && !allNotes.isEmpty()) {
+            dataSet.clear()
+            allNotes = allNotes.sortedWith(compareByDescending { getCreationDate(it) }).toTypedArray()
+            for (file in allNotes) {
+                val m = HashMap<String, Any>()
+                m.put(attributeName, file.nameWithoutExtension)
+                val creationDate = ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
+                m.put(attributeDate, dateFormat.format(Date(creationDate)))
+                dataSet.add(m)
+            }
         }
-        val data = ArrayList<Map<String, Any>>()
-        allNotes = allNotes.sortedWith(compareByDescending { getCreationDate(it) }).toTypedArray()
-        for (file in allNotes) {
-            val m = HashMap<String, Any>()
-            m.put(attributeName, file.nameWithoutExtension)
-            val creationDate = ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
-            m.put(attributeDate, dateFormat.format(Date(creationDate)))
-            data.add(m)
-        }
+    }
+
+    private fun initAdapter(): SimpleAdapter {
         val from = arrayOf(attributeName, attributeDate)
         val to = intArrayOf(R.id.text1, R.id.text2)
-        listView.adapter = SimpleAdapter(this, data, R.layout.list_item, from, to)
-        listView.onItemClickListener = onClickListener
+        return SimpleAdapter(applicationContext, dataSet, R.layout.list_item, from, to)
     }
 
     private val onClickListener = AdapterView.OnItemClickListener { _, view, _, _ ->
@@ -144,8 +164,10 @@ class MainActivity : SlideActivity() {
                 newTitle = Global.iterateTitle(ApplicationContext.appFiles, newTitle)
             }
             ApplicationContext.sharedPref.edit().remove(name.toString()).putLong(newTitle, creationDate).apply()
+            val dataSetItem = dataSet.find { it[attributeName] == file.nameWithoutExtension }
             file.renameTo(File(ApplicationContext.appFiles, "$newTitle.txt"))
-            fillList()
+            dataSetItem?.put(attributeName, newTitle)
+            adapter.notifyDataSetChanged()
         })
 
         alert.setNegativeButton(android.R.string.cancel, { dialog, _ -> dialog.cancel() })
@@ -161,7 +183,8 @@ class MainActivity : SlideActivity() {
         alert.setPositiveButton(android.R.string.ok, { _, _ ->
             ApplicationContext.sharedPref.edit().remove(name.toString()).apply()
             getFile(name).delete()
-            fillList()
+            dataSet.removeAll { it[attributeName] == name }
+            adapter.notifyDataSetChanged()
         })
 
         alert.setNegativeButton(android.R.string.cancel, { dialog, _ -> dialog.cancel() })
