@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.*
 import android.widget.AdapterView
 import android.widget.SimpleAdapter
-import android.widget.TextView
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
 import android.view.ContextMenu.ContextMenuInfo
@@ -14,6 +13,7 @@ import android.view.ContextMenu
 import android.app.AlertDialog
 import android.os.Parcelable
 import android.support.constraint.ConstraintLayout
+import android.util.Log
 import android.widget.EditText
 import kotlinx.android.synthetic.main.toolbar.*
 import java.text.DateFormat
@@ -26,6 +26,7 @@ class MainActivity : SlideActivity() {
     private val listStateKey = "listState"
     private val attributeName = "name"
     private val attributeDate = "created at"
+    private val attributeFile = "file"
     private val dateFormat = SimpleDateFormat.getDateInstance(DateFormat.SHORT)
 
     private var dataSet = mutableListOf<HashMap<String, Any>>()
@@ -51,6 +52,33 @@ class MainActivity : SlideActivity() {
         adapter.notifyDataSetChanged()
     }
 
+    // DEBUG SECTION
+    private fun appPrefDebug() {
+        val files = ApplicationContext.appFiles.listFiles()
+        Log.e("test", "${ApplicationContext.sharedPref.all.size} , ${files.size}")
+        for (i in ApplicationContext.sharedPref.all) {
+            Log.e("test", i.key)
+            if (files.find { it.name == i.key } == null) {
+                Log.e("test", "im here")
+                ApplicationContext.sharedPref.edit().remove(i.key).apply()
+            }
+        }
+    }
+
+    private fun fillAppPref() {
+        val list = arrayListOf(Pair("test", "test"))
+        val files = ApplicationContext.appFiles.listFiles()
+        for (i in list) {
+            val f = files.find { it.name.startsWith(i.first) }
+            if (f == null) {
+                Log.e("test", "cannot find ${i.first}")
+            } else {
+                ApplicationContext.sharedPref.edit().putLong(f.name, dateFormat.parse(i.second).time).apply()
+            }
+        }
+    }
+    // DEBUG SECTION END
+
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
         val state = listView.onSaveInstanceState()
@@ -68,7 +96,8 @@ class MainActivity : SlideActivity() {
             allNotes = allNotes.sortedWith(compareByDescending { getCreationDate(it) }).toTypedArray()
             for (file in allNotes) {
                 val m = HashMap<String, Any>()
-                m.put(attributeName, file.nameWithoutExtension)
+                m.put(attributeName, getDisplayName(file))
+                m.put(attributeFile, file)
                 val creationDate = ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
                 m.put(attributeDate, dateFormat.format(Date(creationDate)))
                 dataSet.add(m)
@@ -76,22 +105,29 @@ class MainActivity : SlideActivity() {
         }
     }
 
+    private fun getDisplayName(file: File): String {
+        if (file.nameWithoutExtension.isNotBlank()) {
+            return file.nameWithoutExtension
+        }
+        return ".".plus(file.extension)
+    }
+
     private fun initAdapter(): SimpleAdapter {
         val from = arrayOf(attributeName, attributeDate)
         val to = intArrayOf(R.id.text1, R.id.text2)
-        return SimpleAdapter(applicationContext, dataSet, R.layout.list_item, from, to)
+        return SimpleAdapter(this, dataSet, R.layout.list_item, from, to)
     }
 
-    private val onClickListener = AdapterView.OnItemClickListener { _, view, _, _ ->
-        val name = view.findViewById<TextView>(R.id.text1).text
-        val file = getFile(name)
+    private val onClickListener = AdapterView.OnItemClickListener { _, _, pos, _ ->
+        val element = dataSet[pos]
+        val file = getFile(element)
         val intent = Intent(this, NoteActivity::class.java).apply {}
         intent.data = Uri.fromFile(file)
         startActivity(intent)
     }
 
-    private fun getFile(name: CharSequence): File {
-        return File(ApplicationContext.appFiles, "$name.txt")
+    private fun getFile(dataItem: Map<String, Any>): File {
+        return dataItem[attributeFile] as File
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
@@ -119,16 +155,16 @@ class MainActivity : SlideActivity() {
     }
 
     override fun onContextItemSelected(item: MenuItem): Boolean {
-        val info = item.menuInfo as AdapterView.AdapterContextMenuInfo
+        val element = dataSet[(item.menuInfo as AdapterView.AdapterContextMenuInfo).position]
         return when (item.itemId) {
 
             R.id.context_rename -> {
-                renameFile((info.targetView.findViewById<TextView>(R.id.text1)).text)
+                renameDialogShow(element)
                 true
             }
 
             R.id.context_delete -> {
-                delete((info.targetView.findViewById<TextView>(R.id.text1)).text)
+                deleteDialogShow(element)
                 true
             }
 
@@ -145,28 +181,21 @@ class MainActivity : SlideActivity() {
         inflater.inflate(R.menu.context_menu, menu)
     }
 
-    private fun renameFile(name: CharSequence) {
+    private fun renameDialogShow(dataItem: HashMap<String, Any>) {
         val alert = AlertDialog.Builder(this)
-        val title = getString(R.string.dialog_rename).format(name)
-        alert.setTitle(title)
+        val file = getFile(dataItem)
+        alert.setTitle(getString(R.string.dialog_rename).format(file.name))
 
         val layout = layoutInflater.inflate(R.layout.rename_dialog_input, ConstraintLayout(this))
         val input = layout.findViewById<EditText>(R.id.renameInput)
-        input.setText(name)
-        input.setSelection(name.length, name.length)
+        input.setText(file.name)
+        input.setSelection(file.nameWithoutExtension.length, file.nameWithoutExtension.length)
         alert.setView(layout)
 
         alert.setPositiveButton(android.R.string.ok, { _, _ ->
-            val file = getFile(name)
-            val creationDate = ApplicationContext.sharedPref.getLong(name.toString(), file.lastModified())
-            var newTitle = Global.makeValidTitle(input.editableText.toString())
-            if (!newTitle.isBlank() && name != newTitle) {
-                newTitle = Global.iterateTitle(ApplicationContext.appFiles, newTitle)
-            }
-            ApplicationContext.sharedPref.edit().remove(name.toString()).putLong(newTitle, creationDate).apply()
-            val dataSetItem = dataSet.find { it[attributeName] == file.nameWithoutExtension }
-            file.renameTo(File(ApplicationContext.appFiles, "$newTitle.txt"))
-            dataSetItem?.put(attributeName, newTitle)
+            val f = renameFile(file, Global.makeValidTitle(input.editableText))
+            dataItem.put(attributeName, getDisplayName(f))
+            dataItem.put(attributeFile, f)
             adapter.notifyDataSetChanged()
         })
 
@@ -175,15 +204,30 @@ class MainActivity : SlideActivity() {
         alertDialog.show()
     }
 
-    private fun delete(name: CharSequence) {
+    private fun renameFile(file: File, newName: String): File {
+        val iterTitle = Global.generateTitleExtended(file.parentFile, newName, file)
+        if (iterTitle.isNotBlank() || file.name != iterTitle) {
+            val creationDate = ApplicationContext.sharedPref.getLong(file.name, file.lastModified())
+            ApplicationContext.sharedPref.edit().remove(file.name).putLong(iterTitle, creationDate).apply()
+            val newFile = File(ApplicationContext.appFiles, iterTitle)
+            if (file.renameTo(newFile)) {
+                return newFile
+            }
+        }
+        return file
+    }
+
+    private fun deleteDialogShow(dataItem: HashMap<String, Any>) {
+        val file = getFile(dataItem)
         val alert = AlertDialog.Builder(this)
-        val title = getString(R.string.dialog_delete).format(name)
+        val title = getString(R.string.dialog_delete).format(file.name)
         alert.setTitle(title)
 
         alert.setPositiveButton(android.R.string.ok, { _, _ ->
-            ApplicationContext.sharedPref.edit().remove(name.toString()).apply()
-            getFile(name).delete()
-            dataSet.removeAll { it[attributeName] == name }
+            ApplicationContext.sharedPref.edit().remove(file.name).apply()
+            if (file.delete()) {
+                dataSet.removeAll { getFile(it) == file }
+            }
             adapter.notifyDataSetChanged()
         })
 

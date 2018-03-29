@@ -12,8 +12,8 @@
     <string name="context_rename">Rename</string>
     <string name="context_delete">Delete</string>
 
-    <string name="dialog_rename">Rename file %s.txt?</string>
-    <string name="dialog_delete">Delete file %s.txt?</string>
+    <string name="dialog_rename">Rename file %s?</string>
+    <string name="dialog_delete">Delete file %s?</string>
 
     <string name="toast_saved">Saved</string>
 

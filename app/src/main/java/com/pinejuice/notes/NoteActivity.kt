@@ -21,8 +21,7 @@ class NoteActivity : SlideActivity() {
     private val editStateKey = "enableEdit"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private val gestureListener = GestureListener()
-    private val ellipsis = (0x2026).toChar()
-    private val truncateLength = 30
+    private val truncateLength = 60
 
     private var editEnabled = true
     private var menu: Menu? = null
@@ -182,28 +181,28 @@ class NoteActivity : SlideActivity() {
         }
     }
 
-    private fun generateTitle(directory: File): String {
+    private fun generateTitle(): String {
         var title: String = Global.makeValidTitle(noteTitle.text)
         if (title.isBlank()) {
-            val lines = editNote.text.split("\n")
+            val lines = editNote.text.split(Regex("[\n?]"))
             val firstLine = lines.firstOrNull() ?: ""
-            title = Global.makeValidTitle(firstLine.take(truncateLength))
-            if (lines.size > 1 || firstLine.length > truncateLength) {
-                title = title.plus(Character.toString(ellipsis))
+            var truncatedLine = firstLine.take(truncateLength)
+            val spacePos = truncatedLine.lastIndexOf(" ")
+            if (firstLine.length > truncateLength && spacePos > -1) {
+                truncatedLine = truncatedLine.substring(0, spacePos)
             }
+            title = Global.makeValidTitle(truncatedLine)
         }
         if (title.isBlank()) {
-            title = dateFormat.format(Date())
+            val creationDate = ApplicationContext.sharedPref.getLong(file?.name, Date().time)
+            title = dateFormat.format(Date(creationDate))
         }
-        if (title != file?.nameWithoutExtension) {
-            title = Global.iterateTitle(directory, title)
-        }
-        return "$title.txt"
+        return title
     }
 
     private fun createFile(): File {
         val dir = ApplicationContext.appFiles
-        val f = File(dir.absolutePath, generateTitle(dir))
+        val f = File(dir.absolutePath, Global.generateTitle(dir, generateTitle()))
         f.createNewFile()
         val creationDate = Date()
         ApplicationContext.sharedPref.edit().putLong(f.name, creationDate.time).apply()
@@ -216,7 +215,7 @@ class NoteActivity : SlideActivity() {
         } else {
             val f = file!!
             val currentName = f.name
-            val newName = generateTitle(f.parentFile)
+            val newName = Global.generateTitle(f.parentFile, generateTitle(), f)
             if (currentName != newName) {
                 file = File(f.parentFile, newName)
                 f.renameTo(file)
