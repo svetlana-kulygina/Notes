@@ -30,6 +30,7 @@ class NoteActivity : SlideActivity() {
     private var menu: Menu? = null
     private var file: File? = null
     private lateinit var gestureDetector: GestureDetector
+    private var savedOffset = 0F
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,15 +41,16 @@ class NoteActivity : SlideActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
         editNote.addOnLayoutChangeListener(noteLayoutListener)
+        scrollView.addOnLayoutChangeListener(scrollLayoutListener)
+        fab.setOnClickListener(fabForBottomListener)
 
         if (savedInstanceState == null) {
             if (intent.data != null) {
-                parseIntentUri(intent.data)
                 enableEdit(false)
+                parseIntentUri(intent.data)
             }
         } else {
-            editNote.removeOnLayoutChangeListener(noteLayoutListener)
-            scrollView.scrollTo(scrollView.scrollX, savedInstanceState.getInt(scrollYKey))
+            savedOffset = savedInstanceState.getFloat(scrollYKey)
             enableEdit(savedInstanceState.getBoolean(editStateKey))
         }
         gestureDetector = GestureDetector(this, gestureListener)
@@ -56,11 +58,26 @@ class NoteActivity : SlideActivity() {
         noteTitle.setOnTouchListener(gestureListener)
     }
 
-    private val noteLayoutListener = View.OnLayoutChangeListener { _, _, _, _, bottom, _, _, _, _ ->
-        if (bottom > scrollView.height) {
-            scrollView.scrollTo(scrollView.scrollX, bottom)
+    private val noteLayoutListener = View.OnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+        if (!editEnabled && bottom - top > scrollView.height) {
+            toggleFab(true)
         }
     }
+
+    private val scrollLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        if (!editEnabled && editNote.height > scrollView.height) {
+            if (savedOffset != 0F) {
+                val newScroll = (savedOffset * (editNote.height)).toInt()
+                scrollView.scrollTo(scrollView.scrollX, newScroll)
+                savedOffset = 0F
+            }
+        }
+    }
+
+    private val fabForBottomListener = View.OnClickListener {
+        scrollView.smoothScrollTo(scrollView.scrollX, editNote.bottom)
+    }
+
 
     class Loader(private val rootRef: WeakReference<View>) : AsyncTask<InputStream, Void, String>() {
 
@@ -84,7 +101,6 @@ class NoteActivity : SlideActivity() {
         override fun onPreExecute() {
             super.onPreExecute()
             val root = rootRef.get()
-            root?.findViewById<View>(R.id.editNote)?.visibility = View.INVISIBLE
             root?.findViewById<View>(R.id.loadingHint)?.visibility = View.VISIBLE
         }
 
@@ -92,15 +108,14 @@ class NoteActivity : SlideActivity() {
             super.onPostExecute(result)
             val root = rootRef.get()
             val textView = root?.findViewById<TextView>(R.id.editNote)
-            textView?.text = result
             root?.findViewById<View>(R.id.loadingHint)?.visibility = View.INVISIBLE
-            textView?.visibility = View.VISIBLE
+            textView?.text = result
         }
     }
 
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
-        outState?.putInt(scrollYKey, scrollView.scrollY)
+        outState?.putFloat(scrollYKey, scrollView.scrollY.toFloat() / editNote.height)
         outState?.putBoolean(editStateKey, editEnabled)
     }
 
@@ -154,8 +169,19 @@ class NoteActivity : SlideActivity() {
         return true
     }
 
+    private fun toggleFab(enable: Boolean) {
+        if (enable) {
+            fab.show()
+        } else {
+            fab.hide()
+        }
+    }
+
     private fun enableEdit(enable: Boolean) {
         editEnabled = enable
+        if (enable) {
+            toggleFab(false)
+        }
         noteTitle.isFocusable = enable
         noteTitle.isFocusableInTouchMode = enable
         noteTitle.isCursorVisible = enable

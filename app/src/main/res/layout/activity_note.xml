@@ -14,18 +14,6 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <TextView
-            android:id="@+id/loadingHint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/hint_loading"
-            android:textColor="@android:color/black"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:padding="5dp"
-            android:gravity="center_horizontal"
-            android:visibility="invisible"/>
-
         <ScrollView
             android:id="@+id/scrollView"
             android:fillViewport="true"
@@ -42,6 +30,30 @@
                 android:textColor="@android:color/black"
                 android:padding="5dp"/>
         </ScrollView>
+
+        <TextView
+            android:id="@+id/loadingHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/hint_loading"
+            android:textColor="@android:color/black"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:padding="5dp"
+            android:gravity="center_horizontal"
+            android:visibility="invisible"/>
+
+        <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end|bottom"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:src="@drawable/ic_bottom_arrow"
+            android:layout_margin="16dp"
+            android:visibility="invisible"/>
     </RelativeLayout>
 
 </LinearLayout>
