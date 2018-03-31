@@ -18,6 +18,7 @@
     <string name="toast_saved">Saved</string>
 
     <string name="hint_note_title">Title</string>
+    <string name="hint_loading">Loading...</string>
 
     <string name="main_no_elements">No notes found</string>
 

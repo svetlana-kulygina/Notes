@@ -1,6 +1,7 @@
 package com.pinejuice.notes
 
 import android.net.Uri
+import android.os.AsyncTask
 import android.os.Bundle
 import android.text.InputType
 import android.widget.Toast
@@ -13,7 +14,9 @@ import android.provider.MediaStore
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
+import android.widget.TextView
 import kotlinx.android.synthetic.main.toolbar.*
+import java.lang.ref.WeakReference
 
 class NoteActivity : SlideActivity() {
 
@@ -36,19 +39,63 @@ class NoteActivity : SlideActivity() {
         supportActionBar?.setDisplayShowCustomEnabled(true)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
+        editNote.addOnLayoutChangeListener(noteLayoutListener)
+
         if (savedInstanceState == null) {
             if (intent.data != null) {
                 parseIntentUri(intent.data)
                 enableEdit(false)
             }
-            scrollView.post { scrollView.fullScroll(View.FOCUS_DOWN) }
         } else {
+            editNote.removeOnLayoutChangeListener(noteLayoutListener)
             scrollView.scrollTo(scrollView.scrollX, savedInstanceState.getInt(scrollYKey))
             enableEdit(savedInstanceState.getBoolean(editStateKey))
         }
         gestureDetector = GestureDetector(this, gestureListener)
         editNote.setOnTouchListener(gestureListener)
         noteTitle.setOnTouchListener(gestureListener)
+    }
+
+    private val noteLayoutListener = View.OnLayoutChangeListener { _, _, _, _, bottom, _, _, _, _ ->
+        if (bottom > scrollView.height) {
+            scrollView.scrollTo(scrollView.scrollX, bottom)
+        }
+    }
+
+    class Loader(private val rootRef: WeakReference<View>) : AsyncTask<InputStream, Void, String>() {
+
+        override fun doInBackground(vararg params: InputStream?): String? {
+            val input = params[0]
+            if (input != null) {
+                BufferedInputStream(input).use { bis ->
+                    ByteArrayOutputStream().use {
+                        var result = bis.read()
+                        while (result != -1) {
+                            it.write(result)
+                            result = bis.read()
+                        }
+                        return it.toString()
+                    }
+                }
+            }
+            return null
+        }
+
+        override fun onPreExecute() {
+            super.onPreExecute()
+            val root = rootRef.get()
+            root?.findViewById<View>(R.id.editNote)?.visibility = View.INVISIBLE
+            root?.findViewById<View>(R.id.loadingHint)?.visibility = View.VISIBLE
+        }
+
+        override fun onPostExecute(result: String?) {
+            super.onPostExecute(result)
+            val root = rootRef.get()
+            val textView = root?.findViewById<TextView>(R.id.editNote)
+            textView?.text = result
+            root?.findViewById<View>(R.id.loadingHint)?.visibility = View.INVISIBLE
+            textView?.visibility = View.VISIBLE
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle?) {
@@ -74,18 +121,8 @@ class NoteActivity : SlideActivity() {
                 input = contentResolver.openInputStream(data)
             }
         }
-        if (input != null) {
-            BufferedInputStream(input).use { bis ->
-                ByteArrayOutputStream().use {
-                    var result = bis.read()
-                    while (result != -1) {
-                        it.write(result)
-                        result = bis.read()
-                    }
-                    editNote.setText(it.toString())
-                }
-            }
-        }
+        val contentView = this.findViewById<View>(android.R.id.content)
+        Loader(WeakReference(contentView)).execute(input)
         if (filePath != null) {
             file = File(filePath)
             noteTitle.setText(file?.nameWithoutExtension)
