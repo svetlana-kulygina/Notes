@@ -18,16 +18,22 @@ import android.view.*
 import android.widget.TextView
 import kotlinx.android.synthetic.main.toolbar.*
 import java.lang.ref.WeakReference
+import kotlin.concurrent.schedule
 
 class NoteActivity : SlideActivity() {
 
     private val scrollYKey = "scrollY"
     private val editStateKey = "enableEdit"
+    private val navigationStateKey = "navEdit"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private val gestureListener = GestureListener()
     private val truncateLength = 60
+    private val timer = Timer("showNavigation", false)
+    private val scheduleTime = 5000L
 
+    private var task: TimerTask? = null
     private var editEnabled = true
+    private var navigationEnabled = true
     private var menu: Menu? = null
     private var file: File? = null
     private lateinit var gestureDetector: GestureDetector
@@ -52,6 +58,7 @@ class NoteActivity : SlideActivity() {
                 parseIntentUri(intent.data)
             }
         } else {
+            navigationEnabled = savedInstanceState.getBoolean(navigationStateKey)
             savedOffset = savedInstanceState.getFloat(scrollYKey)
             enableEdit(savedInstanceState.getBoolean(editStateKey))
         }
@@ -60,9 +67,16 @@ class NoteActivity : SlideActivity() {
         noteTitle.setOnTouchListener(gestureListener)
     }
 
+    private fun setTimer() {
+        task = timer.schedule(scheduleTime) {
+            runOnUiThread( { showNavigation(false) } )
+            task = null
+        }
+    }
+
     private val scrollLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-        if (!editEnabled && editNote.height > scrollView.height) {
-            toggleFab(true)
+        if (!editEnabled) {
+            showNavigation(navigationEnabled)
             var fabDown = true
 
             if (savedOffset != 0F) {
@@ -73,6 +87,10 @@ class NoteActivity : SlideActivity() {
             }
             setFabBehavior(fabDown)
         }
+    }
+
+    private fun displayFab(): Boolean {
+        return editNote.height > scrollView.height
     }
 
     private val fabForBottomListener = View.OnClickListener {
@@ -90,6 +108,21 @@ class NoteActivity : SlideActivity() {
         } else {
             fab.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_top_arrow))
             fab.setOnClickListener(fabForTopListener)
+        }
+    }
+
+    private fun showNavigation(show: Boolean) {
+        if (show) {
+            navigationEnabled = true
+            toggleFab(displayFab())
+            supportActionBar?.show()
+            task?.cancel()
+            setTimer()
+        } else {
+            navigationEnabled = false
+            fab.hide()
+            supportActionBar?.hide()
+            task?.cancel()
         }
     }
 
@@ -131,6 +164,7 @@ class NoteActivity : SlideActivity() {
         super.onSaveInstanceState(outState)
         outState?.putFloat(scrollYKey, scrollView.scrollY.toFloat() / editNote.height)
         outState?.putBoolean(editStateKey, editEnabled)
+        outState?.putBoolean(navigationStateKey, navigationEnabled)
     }
 
     private fun parseIntentUri(data: Uri) {
@@ -194,6 +228,8 @@ class NoteActivity : SlideActivity() {
     private fun enableEdit(enable: Boolean) {
         editEnabled = enable
         if (enable) {
+            task?.cancel()
+            supportActionBar?.show()
             toggleFab(false)
         }
         noteTitle.isFocusable = enable
@@ -316,7 +352,17 @@ class NoteActivity : SlideActivity() {
         override fun onTouch(v: View?, event: MotionEvent?): Boolean {
             v?.performClick()
             view = v
+            if (!editEnabled && event?.action == MotionEvent.ACTION_MOVE && navigationEnabled) {
+                showNavigation(false)
+            }
             return gestureDetector.onTouchEvent(event)
+        }
+
+        override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
+            if (!editEnabled) {
+                showNavigation(!navigationEnabled)
+            }
+            return super.onSingleTapConfirmed(e)
         }
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
