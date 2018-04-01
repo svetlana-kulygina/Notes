@@ -24,7 +24,8 @@ class NoteActivity : SlideActivity() {
 
     private val scrollYKey = "scrollY"
     private val editStateKey = "enableEdit"
-    private val navigationStateKey = "navEdit"
+    private val navigationStateKey = "enableNavigation"
+    private val fileKey = "file"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private val gestureListener = GestureListener()
     private val truncateLength = 60
@@ -51,13 +52,14 @@ class NoteActivity : SlideActivity() {
         scrollView.viewTreeObserver.addOnScrollChangedListener {
             setFabBehavior(scrollView.scrollY + scrollView.height != editNote.bottom)
         }
-
         if (savedInstanceState == null) {
             if (intent.data != null) {
                 enableEdit(false)
                 parseIntentUri(intent.data)
             }
         } else {
+            val path = savedInstanceState.getString(fileKey)
+            file = if (path != null) File(path) else null
             navigationEnabled = savedInstanceState.getBoolean(navigationStateKey)
             savedOffset = savedInstanceState.getFloat(scrollYKey)
             enableEdit(savedInstanceState.getBoolean(editStateKey))
@@ -165,6 +167,7 @@ class NoteActivity : SlideActivity() {
         outState?.putFloat(scrollYKey, scrollView.scrollY.toFloat() / editNote.height)
         outState?.putBoolean(editStateKey, editEnabled)
         outState?.putBoolean(navigationStateKey, navigationEnabled)
+        outState?.putString(fileKey, file?.absolutePath)
     }
 
     private fun parseIntentUri(data: Uri) {
