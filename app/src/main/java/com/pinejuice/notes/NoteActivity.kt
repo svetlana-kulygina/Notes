@@ -78,7 +78,6 @@ class NoteActivity : SlideActivity() {
 
     private val scrollLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
         if (!editEnabled) {
-            showNavigation(navigationEnabled)
             var fabDown = true
 
             if (savedOffset != 0F) {
@@ -88,6 +87,9 @@ class NoteActivity : SlideActivity() {
                 savedOffset = 0F
             }
             setFabBehavior(fabDown)
+            showNavigation(navigationEnabled)
+        } else {
+            showEditModeNavigation()
         }
     }
 
@@ -126,6 +128,12 @@ class NoteActivity : SlideActivity() {
             supportActionBar?.hide()
             task?.cancel()
         }
+    }
+
+    private fun showEditModeNavigation() {
+        task?.cancel()
+        supportActionBar?.show()
+        toggleFab(false)
     }
 
     class Loader(private val rootRef: WeakReference<View>) : AsyncTask<InputStream, Void, String>() {
@@ -228,12 +236,10 @@ class NoteActivity : SlideActivity() {
         }
     }
 
-    private fun enableEdit(enable: Boolean) {
+    private fun enableEdit(enable: Boolean, showEditModeNavigation: Boolean = true) {
         editEnabled = enable
-        if (enable) {
-            task?.cancel()
-            supportActionBar?.show()
-            toggleFab(false)
+        if (enable && showEditModeNavigation) {
+            showEditModeNavigation()
         }
         noteTitle.isFocusable = enable
         noteTitle.isFocusableInTouchMode = enable
@@ -370,7 +376,7 @@ class NoteActivity : SlideActivity() {
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
             if (!editEnabled) {
-                enableEdit(true)
+                enableEdit(true, false)
                 toggleEditBtn(true)
                 view?.requestFocus()
                 return true
