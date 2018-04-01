@@ -11,6 +11,7 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
+import android.support.v4.content.ContextCompat
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
@@ -40,9 +41,10 @@ class NoteActivity : SlideActivity() {
         supportActionBar?.setDisplayShowCustomEnabled(true)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
-        editNote.addOnLayoutChangeListener(noteLayoutListener)
         scrollView.addOnLayoutChangeListener(scrollLayoutListener)
-        fab.setOnClickListener(fabForBottomListener)
+        scrollView.viewTreeObserver.addOnScrollChangedListener {
+            setFabBehavior(scrollView.scrollY + scrollView.height != editNote.bottom)
+        }
 
         if (savedInstanceState == null) {
             if (intent.data != null) {
@@ -58,19 +60,18 @@ class NoteActivity : SlideActivity() {
         noteTitle.setOnTouchListener(gestureListener)
     }
 
-    private val noteLayoutListener = View.OnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
-        if (!editEnabled && bottom - top > scrollView.height) {
-            toggleFab(true)
-        }
-    }
-
     private val scrollLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
         if (!editEnabled && editNote.height > scrollView.height) {
+            toggleFab(true)
+            var fabDown = true
+
             if (savedOffset != 0F) {
                 val newScroll = (savedOffset * (editNote.height)).toInt()
                 scrollView.scrollTo(scrollView.scrollX, newScroll)
+                fabDown = scrollView.scrollY + scrollView.height < editNote.height
                 savedOffset = 0F
             }
+            setFabBehavior(fabDown)
         }
     }
 
@@ -78,6 +79,19 @@ class NoteActivity : SlideActivity() {
         scrollView.smoothScrollTo(scrollView.scrollX, editNote.bottom)
     }
 
+    private val fabForTopListener = View.OnClickListener {
+        scrollView.smoothScrollTo(scrollView.scrollX, editNote.top)
+    }
+
+    private fun setFabBehavior(down: Boolean) {
+        if (down) {
+            fab.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_bottom_arrow))
+            fab.setOnClickListener(fabForBottomListener)
+        } else {
+            fab.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_top_arrow))
+            fab.setOnClickListener(fabForTopListener)
+        }
+    }
 
     class Loader(private val rootRef: WeakReference<View>) : AsyncTask<InputStream, Void, String>() {
 
