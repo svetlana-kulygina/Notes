@@ -15,11 +15,4 @@ abstract class SlideActivity : AppCompatActivity() {
         super.startActivity(intent, bundle)
         overridePendingTransition(R.anim.slide_left_in, R.anim.slide_left_out)
     }
-
-    override fun finish() {
-        super.finish()
-        if (!this.isTaskRoot) {
-            overridePendingTransition(R.anim.slide_right_in, R.anim.slide_right_out)
-        }
-    }
 }
