@@ -11,6 +11,7 @@ import java.io.*
 import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
+import android.support.design.widget.AppBarLayout
 import android.support.v4.content.ContextCompat
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
@@ -20,7 +21,7 @@ import kotlinx.android.synthetic.main.toolbar.*
 import java.lang.ref.WeakReference
 import kotlin.concurrent.schedule
 
-class NoteActivity : SlideActivity() {
+class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
 
     private val scrollYKey = "scrollY"
     private val editStateKey = "enableEdit"
@@ -48,7 +49,7 @@ class NoteActivity : SlideActivity() {
         supportActionBar?.setDisplayShowCustomEnabled(true)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
-        scrollView.addOnLayoutChangeListener(scrollLayoutListener)
+        scrollView.addOnLayoutChangeListener(this)
         scrollView.viewTreeObserver.addOnScrollChangedListener {
             setFabBehavior(scrollView.scrollY + scrollView.height != editNote.bottom)
         }
@@ -60,7 +61,6 @@ class NoteActivity : SlideActivity() {
         } else {
             val path = savedInstanceState.getString(fileKey)
             file = if (path != null) File(path) else null
-            navigationEnabled = savedInstanceState.getBoolean(navigationStateKey)
             savedOffset = savedInstanceState.getFloat(scrollYKey)
             enableEdit(savedInstanceState.getBoolean(editStateKey))
         }
@@ -69,14 +69,19 @@ class NoteActivity : SlideActivity() {
         noteTitle.setOnTouchListener(gestureListener)
     }
 
-    private fun setTimer() {
-        task = timer.schedule(scheduleTime) {
-            runOnUiThread( { showNavigation(false) } )
-            task = null
+    override fun onLayoutChange(v: View?, left: Int, top: Int, right: Int, bottom: Int,
+                                oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
+        toolbarLayout.addOnOffsetChangedListener { appBarLayout, verticalOffset ->
+            if (-verticalOffset == appBarLayout?.height) {
+                toggleFab(false)
+                navigationEnabled = false
+                task?.cancel()
+            } else if (!editEnabled && verticalOffset == 0) {
+                toggleFab(displayFab())
+                navigationEnabled = true
+                setTimer()
+            }
         }
-    }
-
-    private val scrollLayoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
         if (!editEnabled) {
             var fabDown = true
 
@@ -90,6 +95,14 @@ class NoteActivity : SlideActivity() {
             showNavigation(navigationEnabled)
         } else {
             showEditModeNavigation()
+        }
+    }
+
+    private fun setTimer() {
+        task?.cancel()
+        task = timer.schedule(scheduleTime) {
+            runOnUiThread( { showNavigation(false) } )
+            task?.cancel()
         }
     }
 
@@ -116,24 +129,16 @@ class NoteActivity : SlideActivity() {
     }
 
     private fun showNavigation(show: Boolean) {
-        if (show) {
-            navigationEnabled = true
-            toggleFab(displayFab())
-            supportActionBar?.show()
-            task?.cancel()
-            setTimer()
-        } else {
-            navigationEnabled = false
-            fab.hide()
-            supportActionBar?.hide()
-            task?.cancel()
-        }
+        task?.cancel()
+        toolbarLayout.setExpanded(show, true)
+
     }
 
     private fun showEditModeNavigation() {
+        toolbarLayout.setExpanded(true, true)
+        val params = toolbar.layoutParams as AppBarLayout.LayoutParams
+        params.scrollFlags = 0
         task?.cancel()
-        supportActionBar?.show()
-        toggleFab(false)
     }
 
     class Loader(private val rootRef: WeakReference<View>) : AsyncTask<InputStream, Void, String>() {
@@ -170,8 +175,18 @@ class NoteActivity : SlideActivity() {
         }
     }
 
+    override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
+        super.onRestoreInstanceState(savedInstanceState)
+        navigationEnabled = savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled
+        if (!navigationEnabled) {
+            toolbarLayout.setExpanded(false, false)
+            fab.hide()
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
+        task?.cancel()
         outState?.putFloat(scrollYKey, scrollView.scrollY.toFloat() / editNote.height)
         outState?.putBoolean(editStateKey, editEnabled)
         outState?.putBoolean(navigationStateKey, navigationEnabled)
@@ -362,7 +377,7 @@ class NoteActivity : SlideActivity() {
             v?.performClick()
             view = v
             if (!editEnabled && event?.action == MotionEvent.ACTION_MOVE && navigationEnabled) {
-                showNavigation(false)
+                setTimer()
             }
             return gestureDetector.onTouchEvent(event)
         }
