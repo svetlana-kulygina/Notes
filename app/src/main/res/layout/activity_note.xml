@@ -11,44 +11,57 @@
 
     <include layout="@layout/toolbar" />
 
-        <android.support.v4.widget.NestedScrollView
-            android:id="@+id/scrollView"
-            android:layout_gravity="top"
-            android:fillViewport="true"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+    <TextView
+        android:id="@+id/loadingHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/hint_loading"
+        android:textColor="@android:color/black"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:padding="5dp"
+        android:layout_gravity="center"
+        android:visibility="invisible"/>
 
-            <EditText
-                android:id="@+id/editNote"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine|textCapSentences"
-                android:gravity="top"
-                android:background="@android:color/white"
-                android:textColor="@android:color/black"
-                android:padding="5dp"/>
-        </android.support.v4.widget.NestedScrollView>
+    <android.support.v4.widget.NestedScrollView
+        android:id="@+id/scrollView"
+        android:layout_gravity="top"
+        android:fillViewport="true"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <TextView
-            android:id="@+id/loadingHint"
+        <EditText
+            android:id="@+id/editNote"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/hint_loading"
+            android:inputType="textMultiLine|textCapSentences"
+            android:gravity="top"
+            android:background="@android:color/white"
             android:textColor="@android:color/black"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:padding="5dp"
-            android:layout_gravity="center_horizontal"
-            android:visibility="invisible"/>
+            android:padding="5dp"/>
+    </android.support.v4.widget.NestedScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="bottom">
 
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/fab"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="end|bottom"
             android:src="@drawable/ic_bottom_arrow"
+            android:layout_gravity="end"
             android:layout_margin="16dp"
             android:visibility="invisible"/>
+
+        <com.pinejuice.notes.PaginationView
+            android:id="@+id/paginationView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
 
 </android.support.design.widget.CoordinatorLayout>

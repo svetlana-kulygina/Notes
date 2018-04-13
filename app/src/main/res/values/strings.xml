@@ -18,11 +18,17 @@
     <string name="toast_saved">Saved</string>
 
     <string name="hint_note_title">Title</string>
-    <string name="hint_loading">Loading...</string>
+    <string name="hint_loading">Loading&#8230;</string>
 
     <string name="main_no_elements">No notes found</string>
 
     <string name="label_create_new">New</string>
     <string name="label_settings">Settings</string>
+
+    <!-- Actually used just to prevent warnings -->
+    <string name="pagination_start_hint">&lt;&lt;</string>
+    <string name="pagination_backward_hint">&lt;</string>
+    <string name="pagination_forward_hint">&gt;</string>
+    <string name="pagination_end_hint">&gt;&gt;</string>
 
 </resources>

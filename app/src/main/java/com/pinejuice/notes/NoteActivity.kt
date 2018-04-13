@@ -73,13 +73,17 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
                                 oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
         toolbarLayout.addOnOffsetChangedListener { appBarLayout, verticalOffset ->
             if (-verticalOffset == appBarLayout?.height) {
-                toggleFab(false)
+                enableFab(false)
+                enablePagination(false)
                 navigationEnabled = false
                 task?.cancel()
-            } else if (!editEnabled && verticalOffset == 0) {
-                toggleFab(displayFab())
+            } else if (verticalOffset == 0) {
+                enableFab(!editEnabled)
+                enablePagination(!editEnabled)
                 navigationEnabled = true
-                setTimer()
+                if (!editEnabled) {
+                    setTimer()
+                }
             }
         }
         if (!editEnabled) {
@@ -106,11 +110,12 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         }
     }
 
-    private fun displayFab(): Boolean {
+    private fun needDisplayFab(): Boolean {
         return editNote.height > scrollView.height
     }
 
     private val fabForBottomListener = View.OnClickListener {
+        showNavigation(false)
         scrollView.smoothScrollTo(scrollView.scrollX, editNote.bottom)
     }
 
@@ -131,13 +136,13 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
     private fun showNavigation(show: Boolean) {
         task?.cancel()
         toolbarLayout.setExpanded(show, true)
-
     }
 
     private fun showEditModeNavigation() {
         toolbarLayout.setExpanded(true, true)
         val params = toolbar.layoutParams as AppBarLayout.LayoutParams
         params.scrollFlags = 0
+        paginationView.visibility = View.INVISIBLE
         task?.cancel()
     }
 
@@ -146,16 +151,10 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         override fun doInBackground(vararg params: InputStream?): String? {
             val input = params[0]
             if (input != null) {
-                BufferedInputStream(input).use { bis ->
-                    ByteArrayOutputStream().use {
-                        var result = bis.read()
-                        while (result != -1) {
-                            it.write(result)
-                            result = bis.read()
-                        }
-                        return it.toString()
-                    }
-                }
+
+                val paginationView = rootRef.get()?.findViewById<PaginationView>(R.id.paginationView)
+                paginationView?.readInput(input)
+                return String(paginationView?.data ?: kotlin.CharArray(0))
             }
             return null
         }
@@ -180,7 +179,8 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         navigationEnabled = savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled
         if (!navigationEnabled) {
             toolbarLayout.setExpanded(false, false)
-            fab.hide()
+            enablePagination(false)
+            enableFab(false)
         }
     }
 
@@ -243,11 +243,19 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         return true
     }
 
-    private fun toggleFab(enable: Boolean) {
-        if (enable) {
+    private fun enableFab(enable: Boolean) {
+        if (enable && needDisplayFab()) {
             fab.show()
         } else {
             fab.hide()
+        }
+    }
+
+    private fun enablePagination(enable: Boolean) {
+        if (enable) {
+            paginationView.animate().translationY(0F)
+        } else {
+            paginationView.animate().translationY(paginationView.height * 1F)
         }
     }
 
