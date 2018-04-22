@@ -3,6 +3,7 @@ package com.pinejuice.notes
 import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
+import android.support.design.widget.CoordinatorLayout
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
@@ -11,11 +12,14 @@ import android.view.LayoutInflater
 import java.io.InputStream
 import java.io.InputStreamReader
 
+@CoordinatorLayout.DefaultBehavior(PaginationBottomBarBehavior::class)
 class PaginationView: LinearLayout {
 
+    var scrollDistance: Int = 0
     var data: CharArray? = null
-    var offsetNavigation: IntArray? = null
+    var offsetNavigation: IntArray = IntArray(0)
     var currentPage = 1
+    var maxOffset: Int = 0
 
     constructor(ctx: Context): super(ctx) {
         init()
@@ -37,9 +41,10 @@ class PaginationView: LinearLayout {
     override fun onRestoreInstanceState(state: Parcelable?) {
         super.onRestoreInstanceState(state)
         if (state != null) {
-            val savedState = SavedState(state)
+            val savedState = state as SavedState
             currentPage = savedState.currentPage
             offsetNavigation = savedState.offsetNavigation
+            scrollDistance = savedState.scrollDistance
         }
     }
 
@@ -47,7 +52,15 @@ class PaginationView: LinearLayout {
         val state = SavedState(super.onSaveInstanceState())
         state.currentPage = currentPage
         state.offsetNavigation = offsetNavigation
+        state.scrollDistance = scrollDistance
         return state
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        Log.e("test", "$t, $b, $scrollDistance")
+        maxOffset = b - t
+        super.onLayout(changed, l, t, r, b)
+        top += scrollDistance
     }
 
     companion object {
@@ -86,14 +99,10 @@ class PaginationView: LinearLayout {
             if (data == null) {
                 data = truncPair.first
             }
-            Log.e("test", truncPair.first.contentToString())
             res.add(truncPair.first.size)
             trunc = truncPair.second
             cbuf = cbuf2
             cbuf2 = kotlin.CharArray(bufSize)
-        }
-        for (i in res) {
-            Log.e("test", "$i")
         }
         offsetNavigation = res.toIntArray()
         return res
@@ -102,11 +111,13 @@ class PaginationView: LinearLayout {
     internal class SavedState : View.BaseSavedState {
 
         var currentPage: Int = 1
-        var offsetNavigation: IntArray? = null
+        var offsetNavigation: IntArray = IntArray(0)
+        var scrollDistance: Int = 0
 
         constructor(source: Parcel) : super(source) {
             currentPage = source.readInt()
             source.readIntArray(offsetNavigation)
+            scrollDistance = source.readInt()
         }
 
         constructor(superState: Parcelable) : super(superState)
@@ -115,6 +126,7 @@ class PaginationView: LinearLayout {
             super.writeToParcel(out, flags)
             out.writeInt(currentPage)
             out.writeIntArray(offsetNavigation)
+            out.writeInt(scrollDistance)
         }
 
         companion object {

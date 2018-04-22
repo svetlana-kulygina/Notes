@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
 import android.support.design.widget.AppBarLayout
-import android.support.v4.content.ContextCompat
+import android.util.Log
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
@@ -50,9 +50,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
         scrollView.addOnLayoutChangeListener(this)
-        scrollView.viewTreeObserver.addOnScrollChangedListener {
-            setFabBehavior(scrollView.scrollY + scrollView.height != editNote.bottom)
-        }
         if (savedInstanceState == null) {
             if (intent.data != null) {
                 enableEdit(false)
@@ -73,12 +70,10 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
                                 oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
         toolbarLayout.addOnOffsetChangedListener { appBarLayout, verticalOffset ->
             if (-verticalOffset == appBarLayout?.height) {
-                enableFab(false)
                 enablePagination(false)
                 navigationEnabled = false
                 task?.cancel()
             } else if (verticalOffset == 0) {
-                enableFab(!editEnabled)
                 enablePagination(!editEnabled)
                 navigationEnabled = true
                 if (!editEnabled) {
@@ -87,15 +82,12 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
             }
         }
         if (!editEnabled) {
-            var fabDown = true
 
             if (savedOffset != 0F) {
                 val newScroll = (savedOffset * (editNote.height)).toInt()
                 scrollView.scrollTo(scrollView.scrollX, newScroll)
-                fabDown = scrollView.scrollY + scrollView.height < editNote.height
                 savedOffset = 0F
             }
-            setFabBehavior(fabDown)
             showNavigation(navigationEnabled)
         } else {
             showEditModeNavigation()
@@ -110,32 +102,12 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         }
     }
 
-    private fun needDisplayFab(): Boolean {
-        return editNote.height > scrollView.height
-    }
-
-    private val fabForBottomListener = View.OnClickListener {
-        showNavigation(false)
-        scrollView.smoothScrollTo(scrollView.scrollX, editNote.bottom)
-    }
-
-    private val fabForTopListener = View.OnClickListener {
-        scrollView.smoothScrollTo(scrollView.scrollX, editNote.top)
-    }
-
-    private fun setFabBehavior(down: Boolean) {
-        if (down) {
-            fab.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_bottom_arrow))
-            fab.setOnClickListener(fabForBottomListener)
-        } else {
-            fab.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_top_arrow))
-            fab.setOnClickListener(fabForTopListener)
-        }
-    }
-
     private fun showNavigation(show: Boolean) {
         task?.cancel()
+        Log.e("test", "${paginationView.top}")
         toolbarLayout.setExpanded(show, true)
+
+        Log.e("test", "${paginationView.top}")
     }
 
     private fun showEditModeNavigation() {
@@ -154,7 +126,11 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
 
                 val paginationView = rootRef.get()?.findViewById<PaginationView>(R.id.paginationView)
                 paginationView?.readInput(input)
-                return String(paginationView?.data ?: kotlin.CharArray(0))
+                val pagesCount = paginationView?.offsetNavigation?.size ?: 0
+                if (pagesCount < 1) {
+                    paginationView?.visibility = View.VISIBLE
+                }
+                return String(paginationView?.data ?: CharArray(0))
             }
             return null
         }
@@ -178,9 +154,8 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         super.onRestoreInstanceState(savedInstanceState)
         navigationEnabled = savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled
         if (!navigationEnabled) {
-            toolbarLayout.setExpanded(false, false)
             enablePagination(false)
-            enableFab(false)
+            toolbarLayout.setExpanded(false, false)
         }
     }
 
@@ -243,19 +218,11 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         return true
     }
 
-    private fun enableFab(enable: Boolean) {
-        if (enable && needDisplayFab()) {
-            fab.show()
-        } else {
-            fab.hide()
-        }
-    }
-
     private fun enablePagination(enable: Boolean) {
         if (enable) {
-            paginationView.animate().translationY(0F)
+          //  paginationView.animate().translationY(0F)
         } else {
-            paginationView.animate().translationY(paginationView.height * 1F)
+         //   paginationView.animate().translationY(paginationView.height * 1F)
         }
     }
 
