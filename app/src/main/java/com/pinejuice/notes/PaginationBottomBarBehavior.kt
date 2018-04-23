@@ -99,6 +99,7 @@ class PaginationBottomBarBehavior(context: Context?, attrs: AttributeSet?) :
         val pvhX = PropertyValuesHolder.ofInt("top", t, (t + offset))
         val pvhY = PropertyValuesHolder.ofInt("scrollDistance", s, (s + offset))
         animator = ObjectAnimator.ofPropertyValuesHolder(view, pvhX, pvhY)
+        animator!!.duration = 200L
         doAfterAnimation()
         animator!!.start()
     }

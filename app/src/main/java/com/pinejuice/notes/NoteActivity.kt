@@ -12,7 +12,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
 import android.support.design.widget.AppBarLayout
-import android.util.Log
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
@@ -26,6 +25,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
     private val scrollYKey = "scrollY"
     private val editStateKey = "enableEdit"
     private val navigationStateKey = "enableNavigation"
+    private val capsEnabledKey = "capsEnabled"
     private val fileKey = "file"
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private val gestureListener = GestureListener()
@@ -36,6 +36,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
     private var task: TimerTask? = null
     private var editEnabled = true
     private var navigationEnabled = true
+    private var capsEnabled = true
     private var menu: Menu? = null
     private var file: File? = null
     private lateinit var gestureDetector: GestureDetector
@@ -60,6 +61,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
             file = if (path != null) File(path) else null
             savedOffset = savedInstanceState.getFloat(scrollYKey)
             enableEdit(savedInstanceState.getBoolean(editStateKey))
+            capsEnabled = savedInstanceState.getBoolean(capsEnabledKey)
         }
         gestureDetector = GestureDetector(this, gestureListener)
         editNote.setOnTouchListener(gestureListener)
@@ -70,11 +72,9 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
                                 oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
         toolbarLayout.addOnOffsetChangedListener { appBarLayout, verticalOffset ->
             if (-verticalOffset == appBarLayout?.height) {
-                enablePagination(false)
                 navigationEnabled = false
                 task?.cancel()
             } else if (verticalOffset == 0) {
-                enablePagination(!editEnabled)
                 navigationEnabled = true
                 if (!editEnabled) {
                     setTimer()
@@ -104,10 +104,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
 
     private fun showNavigation(show: Boolean) {
         task?.cancel()
-        Log.e("test", "${paginationView.top}")
         toolbarLayout.setExpanded(show, true)
-
-        Log.e("test", "${paginationView.top}")
     }
 
     private fun showEditModeNavigation() {
@@ -154,7 +151,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         super.onRestoreInstanceState(savedInstanceState)
         navigationEnabled = savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled
         if (!navigationEnabled) {
-            enablePagination(false)
             toolbarLayout.setExpanded(false, false)
         }
     }
@@ -165,6 +161,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         outState?.putFloat(scrollYKey, scrollView.scrollY.toFloat() / editNote.height)
         outState?.putBoolean(editStateKey, editEnabled)
         outState?.putBoolean(navigationStateKey, navigationEnabled)
+        outState?.putBoolean(capsEnabledKey, capsEnabled)
         outState?.putString(fileKey, file?.absolutePath)
     }
 
@@ -215,15 +212,8 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         this.menu = menu
         toggleEditBtn(editEnabled)
+        toggleCaps()
         return true
-    }
-
-    private fun enablePagination(enable: Boolean) {
-        if (enable) {
-          //  paginationView.animate().translationY(0F)
-        } else {
-         //   paginationView.animate().translationY(paginationView.height * 1F)
-        }
     }
 
     private fun enableEdit(enable: Boolean, showEditModeNavigation: Boolean = true) {
@@ -251,16 +241,16 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
     }
 
     private fun toggleCaps() {
-        val input = editNote.inputType.and(InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
         val caps = menu?.findItem(R.id.action_caps)
-        if (input == 0) {
+        if (capsEnabled) {
             caps?.setIcon(R.drawable.ic_caps)
             caps?.setTitle(R.string.menu_caps_enabled)
+            editNote.inputType = editNote.inputType.or(InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
         } else {
             caps?.setIcon(R.drawable.ic_lower)
             caps?.setTitle(R.string.menu_caps_disabled)
+            editNote.inputType = editNote.inputType.and(InputType.TYPE_TEXT_FLAG_CAP_SENTENCES.inv())
         }
-        editNote.inputType = editNote.inputType.xor(InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
     }
 
     override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
@@ -279,6 +269,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         }
 
         R.id.action_caps -> {
+            capsEnabled = !capsEnabled
             toggleCaps()
             true
         }
