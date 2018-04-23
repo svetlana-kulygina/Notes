@@ -111,7 +111,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         toolbarLayout.setExpanded(true, true)
         val params = toolbar.layoutParams as AppBarLayout.LayoutParams
         params.scrollFlags = 0
-        paginationView.visibility = View.INVISIBLE
+        paginationView.visibility = View.GONE
         task?.cancel()
     }
 
@@ -123,10 +123,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
 
                 val paginationView = rootRef.get()?.findViewById<PaginationView>(R.id.paginationView)
                 paginationView?.readInput(input)
-                val pagesCount = paginationView?.offsetNavigation?.size ?: 0
-                if (pagesCount < 1) {
-                    paginationView?.visibility = View.VISIBLE
-                }
                 return String(paginationView?.data ?: CharArray(0))
             }
             return null

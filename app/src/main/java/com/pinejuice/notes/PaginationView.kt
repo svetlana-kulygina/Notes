@@ -45,6 +45,7 @@ class PaginationView: LinearLayout {
             currentPage = savedState.currentPage
             offsetNavigation = savedState.offsetNavigation
             scrollDistance = savedState.scrollDistance
+            visibility = if (savedState.visible) View.VISIBLE else View.GONE
         }
     }
 
@@ -53,6 +54,7 @@ class PaginationView: LinearLayout {
         state.currentPage = currentPage
         state.offsetNavigation = offsetNavigation
         state.scrollDistance = scrollDistance
+        state.visible = visibility == View.VISIBLE
         return state
     }
 
@@ -105,6 +107,7 @@ class PaginationView: LinearLayout {
             cbuf2 = kotlin.CharArray(bufSize)
         }
         offsetNavigation = res.toIntArray()
+        visibility = if (res.size <= 1) View.GONE else View.VISIBLE
         return res
     }
 
@@ -113,11 +116,13 @@ class PaginationView: LinearLayout {
         var currentPage: Int = 1
         var offsetNavigation: IntArray = IntArray(0)
         var scrollDistance: Int = 0
+        var visible: Boolean = true
 
         constructor(source: Parcel) : super(source) {
             currentPage = source.readInt()
             source.readIntArray(offsetNavigation)
             scrollDistance = source.readInt()
+            visible = source.readInt() != 0
         }
 
         constructor(superState: Parcelable) : super(superState)
@@ -127,6 +132,7 @@ class PaginationView: LinearLayout {
             out.writeInt(currentPage)
             out.writeIntArray(offsetNavigation)
             out.writeInt(scrollDistance)
+            out.writeInt(if (visible) 1 else 0)
         }
 
         companion object {
