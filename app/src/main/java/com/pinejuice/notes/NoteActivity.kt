@@ -1,7 +1,6 @@
 package com.pinejuice.notes
 
 import android.net.Uri
-import android.os.AsyncTask
 import android.os.Bundle
 import android.text.InputType
 import android.widget.Toast
@@ -15,12 +14,11 @@ import android.support.design.widget.AppBarLayout
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
-import android.widget.TextView
 import kotlinx.android.synthetic.main.toolbar.*
 import java.lang.ref.WeakReference
 import kotlin.concurrent.schedule
 
-class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
+class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.LoadingListener {
 
     private val scrollYKey = "scrollY"
     private val editStateKey = "enableEdit"
@@ -115,34 +113,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
         task?.cancel()
     }
 
-    class Loader(private val rootRef: WeakReference<View>) : AsyncTask<InputStream, Void, String>() {
-
-        override fun doInBackground(vararg params: InputStream?): String? {
-            val input = params[0]
-            if (input != null) {
-
-                val paginationView = rootRef.get()?.findViewById<PaginationView>(R.id.paginationView)
-                paginationView?.readInput(input)
-                return String(paginationView?.data ?: CharArray(0))
-            }
-            return null
-        }
-
-        override fun onPreExecute() {
-            super.onPreExecute()
-            val root = rootRef.get()
-            root?.findViewById<View>(R.id.loadingHint)?.visibility = View.VISIBLE
-        }
-
-        override fun onPostExecute(result: String?) {
-            super.onPostExecute(result)
-            val root = rootRef.get()
-            val textView = root?.findViewById<TextView>(R.id.editNote)
-            root?.findViewById<View>(R.id.loadingHint)?.visibility = View.INVISIBLE
-            textView?.text = result
-        }
-    }
-
     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
         super.onRestoreInstanceState(savedInstanceState)
         navigationEnabled = savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled
@@ -162,24 +132,17 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
     }
 
     private fun parseIntentUri(data: Uri) {
-        var input: InputStream? = null
+        val input = contentResolver.openInputStream(data)
         var filePath: String? = null
         when (data.scheme) {
             "file" -> {
                 filePath = data.path
-                input = try {
-                    File(filePath).inputStream()
-                } catch (ex: FileNotFoundException) {
-                    null
-                }
             }
             "content" -> {
                 filePath = getRealPathFromURI(data)
-                input = contentResolver.openInputStream(data)
             }
         }
-        val contentView = this.findViewById<View>(android.R.id.content)
-        Loader(WeakReference(contentView)).execute(input)
+        InputLoader(WeakReference(paginationView), this).execute(input)
         if (filePath != null) {
             file = File(filePath)
             noteTitle.setText(file?.nameWithoutExtension)
@@ -329,6 +292,15 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener {
             it.append(editNote.text)
         }
         Toast.makeText(this, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onLoadingStart() {
+        loadingHint.visibility = View.VISIBLE
+    }
+
+    override fun onLoadingEnd(result: String) {
+        editNote.setText(result)
+        loadingHint.visibility = View.INVISIBLE
     }
 
     private inner class GestureListener : SimpleOnGestureListener(), View.OnTouchListener {

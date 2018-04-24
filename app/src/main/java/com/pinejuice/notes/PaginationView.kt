@@ -16,10 +16,11 @@ import java.io.InputStreamReader
 class PaginationView: LinearLayout {
 
     var scrollDistance: Int = 0
-    var data: CharArray? = null
+    var data: CharArray = CharArray(0)
     var offsetNavigation: IntArray = IntArray(0)
     var currentPage = 1
     var maxOffset: Int = 0
+    var loadingListener: InputLoader.LoadingListener? = null
 
     constructor(ctx: Context): super(ctx) {
         init()
@@ -87,7 +88,7 @@ class PaginationView: LinearLayout {
         }
     }
 
-    fun readInput(input: InputStream?): ArrayList<Int> {
+    fun readInput(input: InputStream): ArrayList<Int> {
         val res = arrayListOf<Int>()
         val reader = InputStreamReader(input)
         var cbuf: CharArray = kotlin.CharArray(bufSize)
@@ -98,7 +99,7 @@ class PaginationView: LinearLayout {
         while (!endLoop || !cbuf.all { it == nul } || trunc.isNotEmpty()) {
             endLoop = reader.read(cbuf2) == -1
             val truncPair = truncateBufferBySpace(trunc.plus(if (!endLoop) cbuf else trimNull(cbuf)))
-            if (data == null) {
+            if (data.isEmpty()) {
                 data = truncPair.first
             }
             res.add(truncPair.first.size)
