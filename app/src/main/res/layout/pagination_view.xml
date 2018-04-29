@@ -9,6 +9,7 @@
     android:theme="@style/BottomToolbar">
 
     <ImageButton
+        android:id="@+id/page_first"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="12dp"
@@ -19,6 +20,7 @@
         android:contentDescription="@string/pagination_start_hint"/>
 
     <ImageButton
+        android:id="@+id/page_prev"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="12dp"
@@ -29,16 +31,18 @@
         android:contentDescription="@string/pagination_backward_hint"/>
 
     <EditText
+        android:id="@+id/page_number"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="1"
         android:textColor="@android:color/white"
         android:textSize="18sp"
-        android:inputType="number"/>
+        android:inputType="number"
+        android:digits="0123456789&#13;"/>
 
     <ImageButton
+        android:id="@+id/page_next"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="12dp"
@@ -49,6 +53,7 @@
         android:contentDescription="@string/pagination_forward_hint"/>
 
     <ImageButton
+        android:id="@+id/page_last"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="12dp"

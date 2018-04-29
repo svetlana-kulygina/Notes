@@ -11,11 +11,11 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
 import android.support.design.widget.AppBarLayout
+import android.util.Log
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
 import kotlinx.android.synthetic.main.toolbar.*
-import java.lang.ref.WeakReference
 import kotlin.concurrent.schedule
 
 class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.LoadingListener {
@@ -49,6 +49,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
         scrollView.addOnLayoutChangeListener(this)
+        paginationView.loadingListener = this
         if (savedInstanceState == null) {
             if (intent.data != null) {
                 enableEdit(false)
@@ -132,7 +133,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     private fun parseIntentUri(data: Uri) {
-        val input = contentResolver.openInputStream(data)
         var filePath: String? = null
         when (data.scheme) {
             "file" -> {
@@ -142,11 +142,12 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
                 filePath = getRealPathFromURI(data)
             }
         }
-        InputLoader(WeakReference(paginationView), this).execute(input)
         if (filePath != null) {
             file = File(filePath)
             noteTitle.setText(file?.nameWithoutExtension)
         }
+        paginationView.uri = data
+        paginationView.goToPage(1)
     }
 
     private fun getRealPathFromURI(contentUri: Uri): String? {
@@ -299,7 +300,12 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     override fun onLoadingEnd(result: String) {
-        editNote.setText(result)
+        editNote.setText(result.trim())
+        val pi = paginationView.getPageInputView()
+        pi.setText(paginationView.currentPage.toString())
+        if (pi.isFocused) {
+            pi.setSelection(pi.text.length)
+        }
         loadingHint.visibility = View.INVISIBLE
     }
 
