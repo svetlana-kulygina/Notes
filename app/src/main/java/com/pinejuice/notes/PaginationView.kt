@@ -22,11 +22,8 @@ class PaginationView: LinearLayout {
     var scrollDistance: Int = 0
     var offsetNavigation: IntArray = IntArray(0)
     var currentPage = 0
-//        set(value) {
-//            field = value
-//            page_number?.setText(value.toString())
-//        }
     var maxOffset: Int = 0
+    var initTop: Int = 0
     var loadingListener: InputLoader.LoadingListener? = null
     var uri: Uri? = null
 
@@ -97,6 +94,7 @@ class PaginationView: LinearLayout {
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         maxOffset = b - t
+        initTop = t
         super.onLayout(changed, l, t, r, b)
         top += scrollDistance
     }
