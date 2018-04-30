@@ -16,7 +16,6 @@ import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
 import kotlinx.android.synthetic.main.toolbar.*
-import kotlin.concurrent.schedule
 
 class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.LoadingListener {
 
@@ -28,16 +27,14 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
     private val gestureListener = GestureListener()
     private val truncateLength = 60
-    private val timer = Timer("showNavigation", false)
-    private val scheduleTime = 5000L
 
-    private var task: TimerTask? = null
     private var editEnabled = true
     private var navigationEnabled = true
     private var capsEnabled = true
     private var menu: Menu? = null
     private var file: File? = null
     private lateinit var gestureDetector: GestureDetector
+    private lateinit var timer: NavigationTimer
     private var savedOffset = 0F
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,8 +45,16 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         supportActionBar?.setDisplayShowCustomEnabled(true)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
+        timer = NavigationTimer(this, { showNavigation(false) })
         scrollView.addOnLayoutChangeListener(this)
         paginationView.loadingListener = this
+        paginationView.getPageInputView().setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                timer.cancel()
+            } else {
+                timer.start()
+            }
+        }
         if (savedInstanceState == null) {
             if (intent.data != null) {
                 enableEdit(false)
@@ -72,11 +77,11 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         toolbarLayout.addOnOffsetChangedListener { appBarLayout, verticalOffset ->
             if (-verticalOffset == appBarLayout?.height) {
                 navigationEnabled = false
-                task?.cancel()
+                timer.cancel()
             } else if (verticalOffset == 0) {
                 navigationEnabled = true
                 if (!editEnabled) {
-                    setTimer()
+                    timer.start()
                 }
             }
         }
@@ -93,16 +98,8 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         }
     }
 
-    private fun setTimer() {
-        task?.cancel()
-        task = timer.schedule(scheduleTime) {
-            runOnUiThread( { showNavigation(false) } )
-            task?.cancel()
-        }
-    }
-
     private fun showNavigation(show: Boolean) {
-        task?.cancel()
+        timer.cancel()
         toolbarLayout.setExpanded(show, true)
     }
 
@@ -111,7 +108,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         val params = toolbar.layoutParams as AppBarLayout.LayoutParams
         params.scrollFlags = 0
         paginationView.visibility = View.GONE
-        task?.cancel()
+        timer.cancel()
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
@@ -124,7 +121,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
 
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
-        task?.cancel()
+        timer.cancel()
         outState?.putFloat(scrollYKey, scrollView.scrollY.toFloat() / editNote.height)
         outState?.putBoolean(editStateKey, editEnabled)
         outState?.putBoolean(navigationStateKey, navigationEnabled)
@@ -317,7 +314,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
             v?.performClick()
             view = v
             if (!editEnabled && event?.action == MotionEvent.ACTION_MOVE && navigationEnabled) {
-                setTimer()
+                timer.start()
             }
             return gestureDetector.onTouchEvent(event)
         }
