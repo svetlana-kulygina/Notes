@@ -1,5 +1,6 @@
 package com.pinejuice.notes
 
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
@@ -16,6 +17,7 @@ import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
 import kotlinx.android.synthetic.main.toolbar.*
+import android.view.inputmethod.InputMethodManager
 
 class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.LoadingListener {
 
@@ -45,19 +47,25 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         supportActionBar?.setDisplayShowCustomEnabled(true)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         layoutInflater.inflate(R.layout.action_bar_note_custom, toolbar)
-        timer = NavigationTimer(this, { showNavigation(false) })
+        timer = NavigationTimer(this, {
+            if (!paginationView.getPageInputView().isFocused) {
+                showNavigation(false)
+            }
+        })
+        timer.start()
+        enableToolbarScrolling(true)
         scrollView.addOnLayoutChangeListener(this)
         paginationView.loadingListener = this
-        paginationView.getPageInputView().setOnFocusChangeListener { v, hasFocus ->
-            if (hasFocus) {
-                timer.cancel()
-            } else {
-                timer.start()
-            }
+        paginationView.getPageInputView().setOnFocusChangeListener { _, hasFocus ->
+            enableToolbarScrolling(!hasFocus)
+            timer.toggle(!hasFocus)
+        }
+        toolbarLayout.addOnOffsetChangedListener { _, verticalOffset ->
+            navigationEnabled = verticalOffset == 0
         }
         if (savedInstanceState == null) {
+            enableEdit(intent.data == null)
             if (intent.data != null) {
-                enableEdit(false)
                 parseIntentUri(intent.data)
             }
         } else {
@@ -70,53 +78,53 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         gestureDetector = GestureDetector(this, gestureListener)
         editNote.setOnTouchListener(gestureListener)
         noteTitle.setOnTouchListener(gestureListener)
+        val focusListener = View.OnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                showEditModeNavigation()
+            }
+        }
+        editNote.onFocusChangeListener = focusListener
+        noteTitle.onFocusChangeListener = focusListener
     }
 
     override fun onLayoutChange(v: View?, left: Int, top: Int, right: Int, bottom: Int,
                                 oldLeft: Int, oldTop: Int, oldRight: Int, oldBottom: Int) {
-        toolbarLayout.addOnOffsetChangedListener { appBarLayout, verticalOffset ->
-            if (-verticalOffset == appBarLayout?.height) {
-                navigationEnabled = false
-                timer.cancel()
-            } else if (verticalOffset == 0) {
-                navigationEnabled = true
-                if (!editEnabled) {
-                    timer.start()
-                }
-            }
-        }
         if (!editEnabled) {
-
             if (savedOffset != 0F) {
                 val newScroll = (savedOffset * (editNote.height)).toInt()
                 scrollView.scrollTo(scrollView.scrollX, newScroll)
                 savedOffset = 0F
             }
-            showNavigation(navigationEnabled)
-        } else {
-            showEditModeNavigation()
         }
     }
 
-    private fun showNavigation(show: Boolean) {
-        timer.cancel()
-        toolbarLayout.setExpanded(show, true)
+    private fun enableToolbarScrolling(enable: Boolean) {
+        val params = toolbar.layoutParams as AppBarLayout.LayoutParams
+        if (enable) {
+            params.scrollFlags = AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL or
+                    AppBarLayout.LayoutParams.SCROLL_FLAG_ENTER_ALWAYS or
+                    AppBarLayout.LayoutParams.SCROLL_FLAG_SNAP
+        } else {
+            params.scrollFlags = 0
+        }
+    }
+
+    private fun showNavigation(show: Boolean, animate: Boolean = true) {
+        navigationEnabled = show
+        toolbarLayout.setExpanded(show, animate)
     }
 
     private fun showEditModeNavigation() {
-        toolbarLayout.setExpanded(true, true)
-        val params = toolbar.layoutParams as AppBarLayout.LayoutParams
-        params.scrollFlags = 0
+        showNavigation(true)
+        enableToolbarScrolling(false)
         paginationView.visibility = View.GONE
         timer.cancel()
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
         super.onRestoreInstanceState(savedInstanceState)
-        navigationEnabled = savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled
-        if (!navigationEnabled) {
-            toolbarLayout.setExpanded(false, false)
-        }
+        showNavigation(savedInstanceState?.getBoolean(navigationStateKey) ?: navigationEnabled,
+                false)
     }
 
     override fun onSaveInstanceState(outState: Bundle?) {
@@ -173,9 +181,9 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         return true
     }
 
-    private fun enableEdit(enable: Boolean, showEditModeNavigation: Boolean = true) {
+    private fun enableEdit(enable: Boolean) {
         editEnabled = enable
-        if (enable && showEditModeNavigation) {
+        if (enable) {
             showEditModeNavigation()
         }
         noteTitle.isFocusable = enable
@@ -306,29 +314,45 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         loadingHint.visibility = View.INVISIBLE
     }
 
+    private fun hideSoftKeyboard() {
+        try {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(currentFocus!!.windowToken, 0)
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
+    }
+
     private inner class GestureListener : SimpleOnGestureListener(), View.OnTouchListener {
 
         private var view: View? = null
 
         override fun onTouch(v: View?, event: MotionEvent?): Boolean {
+            Log.e("test", "onTouch")
             v?.performClick()
             view = v
-            if (!editEnabled && event?.action == MotionEvent.ACTION_MOVE && navigationEnabled) {
+            if (!editEnabled && event?.action == MotionEvent.ACTION_MOVE) {
                 timer.start()
             }
             return gestureDetector.onTouchEvent(event)
         }
 
         override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
-            if (!editEnabled) {
+            Log.e("test", "onSingleTapConfirmed $navigationEnabled")
+            if (paginationView.getPageInputView().isFocused) {
+                hideSoftKeyboard()
+                window.decorView.requestFocus()
+            } else if (!editEnabled) {
+                timer.toggle(!navigationEnabled)
                 showNavigation(!navigationEnabled)
             }
             return super.onSingleTapConfirmed(e)
         }
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
+            Log.e("test", "onDoubleTap")
             if (!editEnabled) {
-                enableEdit(true, false)
+                enableEdit(true)
                 toggleEditBtn(true)
                 view?.requestFocus()
                 return true

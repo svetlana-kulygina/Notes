@@ -15,7 +15,6 @@
         android:background="?attr/colorPrimary"
         android:elevation="4dp"
         app:titleTextAppearance="@style/ToolbarTitle"
-        app:layout_scrollFlags="scroll|enterAlways|snap"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/AppTheme"/>
 

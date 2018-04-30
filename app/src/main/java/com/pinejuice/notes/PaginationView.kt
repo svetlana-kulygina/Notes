@@ -58,7 +58,6 @@ class PaginationView: LinearLayout {
         page_prev.setOnClickListener { goToPage(maxOf(currentPage - 1, 1)) }
         page_next.setOnClickListener { goToPage(minOf(currentPage + 1, offsetNavigation.size)) }
         page_last.setOnClickListener { goToPage(offsetNavigation.size) }
-        page_number.imeOptions = EditorInfo.IME_ACTION_GO
         page_number.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_GO) {
                 val page = page_number.text.toString().toInt()

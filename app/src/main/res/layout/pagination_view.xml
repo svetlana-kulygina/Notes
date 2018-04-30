@@ -39,7 +39,8 @@
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:inputType="number"
-        android:digits="0123456789&#13;"/>
+        android:digits="0123456789"
+        android:imeOptions="flagNoExtractUi|actionGo"/>
 
     <ImageButton
         android:id="@+id/page_next"

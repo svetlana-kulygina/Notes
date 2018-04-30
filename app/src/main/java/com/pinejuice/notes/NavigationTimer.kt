@@ -24,4 +24,12 @@ class NavigationTimer(val activity: Activity, val cb: () -> Unit) {
     fun cancel() {
         task?.cancel()
     }
+
+    fun toggle(enable: Boolean) {
+        if (enable) {
+            start()
+        } else {
+            cancel()
+        }
+    }
 }
