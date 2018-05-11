@@ -39,6 +39,8 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     private lateinit var timer: NavigationTimer
     private var savedOffset = 0F
 
+    private var enableEditCallback: (() -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_note)
@@ -61,7 +63,16 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
             timer.toggle(!hasFocus)
         }
         toolbarLayout.addOnOffsetChangedListener { _, verticalOffset ->
+            Log.e("test", "vo $verticalOffset")
             navigationEnabled = verticalOffset == 0
+
+            // To follow order: user action -> toolbar open animation -> disable toolbar scrolling -> show keyboard.
+            if (enableEditCallback != null) {
+                if (navigationEnabled) {
+                    enableEditCallback?.invoke()
+                    enableEditCallback = null
+                }
+            }
         }
         if (savedInstanceState == null) {
             enableEdit(intent.data == null)
@@ -78,13 +89,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         gestureDetector = GestureDetector(this, gestureListener)
         editNote.setOnTouchListener(gestureListener)
         noteTitle.setOnTouchListener(gestureListener)
-        val focusListener = View.OnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                showEditModeNavigation()
-            }
-        }
-        editNote.onFocusChangeListener = focusListener
-        noteTitle.onFocusChangeListener = focusListener
     }
 
     override fun onLayoutChange(v: View?, left: Int, top: Int, right: Int, bottom: Int,
@@ -99,6 +103,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     private fun enableToolbarScrolling(enable: Boolean) {
+        Log.e("test", "enableToolbarScrolling $enable")
         val params = toolbar.layoutParams as AppBarLayout.LayoutParams
         if (enable) {
             params.scrollFlags = AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL or
@@ -110,13 +115,18 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     private fun showNavigation(show: Boolean, animate: Boolean = true) {
+        Log.e("test", "show $show")
         navigationEnabled = show
         toolbarLayout.setExpanded(show, animate)
     }
 
     private fun showEditModeNavigation() {
+        enableEditCallback = {
+            enableToolbarScrolling(false)
+            toolbarLayout?.requestLayout()
+            showSoftKeyboard()
+        }
         showNavigation(true)
-        enableToolbarScrolling(false)
         paginationView.visibility = View.GONE
         timer.cancel()
     }
@@ -183,6 +193,7 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
 
     private fun enableEdit(enable: Boolean) {
         editEnabled = enable
+        Log.e("test", "$enable")
         if (enable) {
             showEditModeNavigation()
         }
@@ -323,14 +334,27 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         }
     }
 
+    private fun showSoftKeyboard() {
+        try {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(currentFocus, 0)
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
+    }
+
     private inner class GestureListener : SimpleOnGestureListener(), View.OnTouchListener {
 
         private var view: View? = null
+        private var doubleTapEventCount = 0
 
         override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-            Log.e("test", "onTouch")
-            v?.performClick()
+            Log.e("test", "onTouch ${event?.action}")
             view = v
+            if (editEnabled && enableEditCallback != null) {
+                return true
+            }
+            v?.performClick()
             if (!editEnabled && event?.action == MotionEvent.ACTION_MOVE) {
                 timer.start()
             }
@@ -338,26 +362,40 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         }
 
         override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
-            Log.e("test", "onSingleTapConfirmed $navigationEnabled")
-            if (paginationView.getPageInputView().isFocused) {
-                hideSoftKeyboard()
-                window.decorView.requestFocus()
-            } else if (!editEnabled) {
-                timer.toggle(!navigationEnabled)
-                showNavigation(!navigationEnabled)
+            Log.e("test", "onSingleTapConfirmed $navigationEnabled ${e?.action ?: "null"}")
+            if (e?.action == 0) {
+                if (paginationView.getPageInputView().isFocused) {
+                    hideSoftKeyboard()
+                    window.decorView.requestFocus()
+                } else if (!editEnabled) {
+                    timer.toggle(!navigationEnabled)
+                    showNavigation(!navigationEnabled)
+                }
             }
             return super.onSingleTapConfirmed(e)
         }
 
-        override fun onDoubleTap(e: MotionEvent): Boolean {
-            Log.e("test", "onDoubleTap")
+        override fun onDoubleTap(e: MotionEvent?): Boolean {
+            Log.e("test", "onDoubleTap ${e?.action}")
+            doubleTapEventCount = 0
             if (!editEnabled) {
+                coordinator.scrollEnabled = false
                 enableEdit(true)
                 toggleEditBtn(true)
                 view?.requestFocus()
                 return true
             }
             return false
+        }
+
+        override fun onDown(e: MotionEvent?): Boolean {
+            Log.e("test", "onDown")
+            return super.onDown(e)
+        }
+
+        override fun onSingleTapUp(e: MotionEvent?): Boolean {
+            Log.e("test", "onSingleTapUp")
+            return super.onSingleTapUp(e)
         }
     }
 }

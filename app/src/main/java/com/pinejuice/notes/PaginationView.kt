@@ -104,7 +104,7 @@ class PaginationView: LinearLayout {
 
     companion object {
 
-        val bufSize = 100
+        val bufSize = 10000
 
         val nul = 0.toChar()
 
@@ -154,7 +154,6 @@ class PaginationView: LinearLayout {
             cur += 1
         }
         offsetNavigation = res.toIntArray()
-        visibility = if (res.size <= 1) View.GONE else View.VISIBLE
         resetInput()
         return data
     }

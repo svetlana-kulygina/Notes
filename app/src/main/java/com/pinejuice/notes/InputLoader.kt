@@ -1,6 +1,7 @@
 package com.pinejuice.notes
 
 import android.os.AsyncTask
+import android.view.View
 import java.lang.ref.WeakReference
 
 class InputLoader(private val paginationRef: WeakReference<PaginationView>,
@@ -20,6 +21,9 @@ class InputLoader(private val paginationRef: WeakReference<PaginationView>,
 
     override fun onPostExecute(result: String) {
         super.onPostExecute(result)
+        val paginationView = paginationRef.get()?.findViewById<PaginationView>(R.id.paginationView)
+        val size = paginationView?.offsetNavigation?.size ?: 0
+        paginationView?.visibility = if (size <= 1) View.GONE else View.VISIBLE
         loadingListener?.onLoadingEnd(result)
     }
 
