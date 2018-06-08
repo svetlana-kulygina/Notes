@@ -63,7 +63,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
             timer.toggle(!hasFocus)
         }
         toolbarLayout.addOnOffsetChangedListener { _, verticalOffset ->
-            Log.e("test", "vo $verticalOffset")
             navigationEnabled = verticalOffset == 0
 
             // To follow order: user action -> toolbar open animation -> disable toolbar scrolling -> show keyboard.
@@ -75,8 +74,11 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
             }
         }
         if (savedInstanceState == null) {
-            enableEdit(intent.data == null)
-            if (intent.data != null) {
+            val newNoteCreate = intent.data == null
+            enableEdit(newNoteCreate)
+            if (newNoteCreate) {
+                editNote.requestFocus()
+            } else {
                 parseIntentUri(intent.data)
             }
         } else {
