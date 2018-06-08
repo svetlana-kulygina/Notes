@@ -18,6 +18,7 @@ import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
 import kotlinx.android.synthetic.main.toolbar.*
 import android.view.inputmethod.InputMethodManager
+import com.ibm.icu.text.CharsetDetector
 
 class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.LoadingListener {
 
@@ -318,13 +319,25 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     override fun onLoadingEnd(result: String) {
-        editNote.setText(result.trim())
+        editNote.setText(encode(result))
         val pi = paginationView.getPageInputView()
         pi.setText(paginationView.currentPage.toString())
         if (pi.isFocused) {
             pi.setSelection(pi.text.length)
         }
         loadingHint.visibility = View.INVISIBLE
+    }
+
+    private fun encode(str: String): String {
+        val charsetMatch = CharsetDetector().setText(str.toByteArray(Charsets.ISO_8859_1)).detect()
+        if (charsetMatch != null) {
+            try {
+                val encoding = charsetMatch.name
+                return java.lang.String(str.toByteArray(Charsets.ISO_8859_1), encoding).toString()
+            } catch (ex: IOException) {
+            }
+        }
+        return str
     }
 
     private fun hideSoftKeyboard() {

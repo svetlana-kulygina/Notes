@@ -13,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import kotlinx.android.synthetic.main.pagination_view.view.*
+import java.io.FileNotFoundException
 import java.io.InputStreamReader
 import java.lang.ref.WeakReference
 
@@ -34,7 +35,7 @@ class PaginationView: LinearLayout {
                 if (uri == null) {
                     throw Exception("Uri must be defined.")
                 }
-                _reader = InputStreamReader(context.contentResolver.openInputStream(uri))
+                _reader = InputStreamReader(context.contentResolver.openInputStream(uri), Charsets.ISO_8859_1)
             }
             return _reader!!
         }
@@ -136,12 +137,12 @@ class PaginationView: LinearLayout {
         var cbuf = CharArray(bufSize)
         var cbuf2 = CharArray(bufSize)
         var trunc = CharArray(0)
-        var endLoop = reader.read(cbuf) == -1
+        var endLoop = readBuf(cbuf) == -1
         var cur = 1
         var data = CharArray(0)
 
         while (!endLoop || !cbuf.all { it == nul } || trunc.isNotEmpty()) {
-            endLoop = reader.read(cbuf2) == -1
+            endLoop = readBuf(cbuf2) == -1
             val truncPair = truncateBufferBySpace(trunc.plus(if (!endLoop) cbuf else trimNull(cbuf)))
             if (cur == page || cur == 1) {
                 data = truncPair.first
@@ -156,6 +157,14 @@ class PaginationView: LinearLayout {
         offsetNavigation = res.toIntArray()
         resetInput()
         return data
+    }
+
+    private fun readBuf(buf: CharArray): Int {
+        try {
+            return reader.read(buf)
+        } catch (ex: FileNotFoundException){
+            return -1
+        }
     }
 
     fun loadPage(page: Int): CharArray {
@@ -173,7 +182,7 @@ class PaginationView: LinearLayout {
                 if (i + 1 == p) {
                     currentPage = p
                     cbuf = CharArray(offset)
-                    reader.read(cbuf)
+                    readBuf(cbuf)
                     Log.e("test", "im here")
                     break
                 } else {
