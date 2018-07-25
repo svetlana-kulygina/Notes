@@ -27,6 +27,7 @@ class PaginationView: LinearLayout {
     var initTop: Int = 0
     var loadingListener: InputLoader.LoadingListener? = null
     var uri: Uri? = null
+    var pageChangeListener: () -> Unit = {}
 
     private var _reader: InputStreamReader? = null
     val reader: InputStreamReader
@@ -201,6 +202,7 @@ class PaginationView: LinearLayout {
     }
 
     fun goToPage(page: Int) {
+        pageChangeListener()
         if (page != currentPage) {
             val loader = InputLoader(WeakReference(this), loadingListener)
             loader.page = page

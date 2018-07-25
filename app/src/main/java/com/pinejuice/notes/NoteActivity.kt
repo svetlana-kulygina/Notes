@@ -12,13 +12,12 @@ import java.text.SimpleDateFormat
 import java.util.*
 import android.provider.MediaStore
 import android.support.design.widget.AppBarLayout
-import android.util.Log
 import java.lang.Exception
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.*
 import kotlinx.android.synthetic.main.toolbar.*
 import android.view.inputmethod.InputMethodManager
-import com.ibm.icu.text.CharsetDetector
+import ibm.CharsetDetector
 
 class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.LoadingListener {
 
@@ -59,6 +58,9 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         enableToolbarScrolling(true)
         scrollView.addOnLayoutChangeListener(this)
         paginationView.loadingListener = this
+        paginationView.pageChangeListener = {
+            timer.toggle(true)
+        }
         paginationView.getPageInputView().setOnFocusChangeListener { _, hasFocus ->
             enableToolbarScrolling(!hasFocus)
             timer.toggle(!hasFocus)
@@ -106,7 +108,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     private fun enableToolbarScrolling(enable: Boolean) {
-        Log.e("test", "enableToolbarScrolling $enable")
         val params = toolbar.layoutParams as AppBarLayout.LayoutParams
         if (enable) {
             params.scrollFlags = AppBarLayout.LayoutParams.SCROLL_FLAG_SCROLL or
@@ -118,7 +119,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
     }
 
     private fun showNavigation(show: Boolean, animate: Boolean = true) {
-        Log.e("test", "show $show")
         navigationEnabled = show
         toolbarLayout.setExpanded(show, animate)
     }
@@ -196,7 +196,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
 
     private fun enableEdit(enable: Boolean) {
         editEnabled = enable
-        Log.e("test", "$enable")
         if (enable) {
             showEditModeNavigation()
         }
@@ -364,7 +363,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         private var doubleTapEventCount = 0
 
         override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-            Log.e("test", "onTouch ${event?.action}")
             view = v
             if (editEnabled && enableEditCallback != null) {
                 return true
@@ -377,7 +375,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         }
 
         override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
-            Log.e("test", "onSingleTapConfirmed $navigationEnabled ${e?.action ?: "null"}")
             if (e?.action == 0) {
                 if (paginationView.getPageInputView().isFocused) {
                     hideSoftKeyboard()
@@ -391,7 +388,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
         }
 
         override fun onDoubleTap(e: MotionEvent?): Boolean {
-            Log.e("test", "onDoubleTap ${e?.action}")
             doubleTapEventCount = 0
             if (!editEnabled) {
                 coordinator.scrollEnabled = false
@@ -401,16 +397,6 @@ class NoteActivity : SlideActivity(), View.OnLayoutChangeListener, InputLoader.L
                 return true
             }
             return false
-        }
-
-        override fun onDown(e: MotionEvent?): Boolean {
-            Log.e("test", "onDown")
-            return super.onDown(e)
-        }
-
-        override fun onSingleTapUp(e: MotionEvent?): Boolean {
-            Log.e("test", "onSingleTapUp")
-            return super.onSingleTapUp(e)
         }
     }
 }
